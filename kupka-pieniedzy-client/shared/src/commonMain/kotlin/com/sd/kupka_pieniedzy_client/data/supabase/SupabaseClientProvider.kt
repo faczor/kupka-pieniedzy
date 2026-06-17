@@ -3,6 +3,7 @@ package com.sd.kupka_pieniedzy_client.data.supabase
 import com.sd.kupka_pieniedzy_client.core.config.AppConfig
 import com.sd.kupka_pieniedzy_client.core.logging.AppLog
 import io.github.jan.supabase.SupabaseClient
+import io.github.jan.supabase.annotations.SupabaseInternal
 import io.github.jan.supabase.createSupabaseClient
 import io.github.jan.supabase.postgrest.Postgrest
 import io.github.jan.supabase.postgrest.postgrest
@@ -22,6 +23,7 @@ class SupabaseClientProvider(private val config: AppConfig) {
         explicitNulls = false
     }
 
+    @OptIn(SupabaseInternal::class)
     val client: SupabaseClient =
         createSupabaseClient(
             supabaseUrl = config.supabaseUrl,
