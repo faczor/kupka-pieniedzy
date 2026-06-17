@@ -21,6 +21,8 @@ data class ReceiptDto(
     @SerialName("status") val status: String = "pending",
     @SerialName("confidence") val confidence: Float? = null,
     @SerialName("raw_ocr_json") val rawOcrJson: JsonElement? = null,
+    // Toast „gotowy” odhaczony — paragon dalej `ready`, ale notyfikacja już pokazana.
+    @SerialName("acknowledged") val acknowledged: Boolean = false,
 )
 
 /** Insert do `receipts` (status pending na start). */

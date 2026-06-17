@@ -71,6 +71,9 @@ interface ReceiptRepository {
 
     suspend fun getReadyOne(): Outcome<Receipt?>
 
+    /** Odhacza toast „gotowy” (paragon nadal `ready`, ale notyfikacja już nie wraca). */
+    suspend fun acknowledge(receiptId: String): Outcome<Unit>
+
     suspend fun getAnalyzed(receiptId: String): Outcome<AnalyzedReceipt>
 
     suspend fun markReady(receipt: AnalyzedReceipt): Outcome<Unit>

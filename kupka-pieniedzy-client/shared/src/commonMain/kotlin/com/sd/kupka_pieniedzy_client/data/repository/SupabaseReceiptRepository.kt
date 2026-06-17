@@ -69,12 +69,25 @@ class SupabaseReceiptRepository(
                     filter {
                         eq("user_id", config.userId)
                         eq("status", "ready")
+                        // Toast jednorazowy: po kliknięciu paragon jest odhaczany i znika z notyfikacji.
+                        eq("acknowledged", false)
                     }
                     order("created_at", Order.DESCENDING)
                     limit(1)
                 }
                 .decodeSingleOrNull<ReceiptDto>()
                 ?.toDomain(config.defaultCurrency)
+        }
+
+    override suspend fun acknowledge(receiptId: String): Outcome<Unit> =
+        runCatchingDomain(supabase.isConfigured) {
+            supabase.postgrest.from("receipts").update(ReceiptAcknowledgePatch(acknowledged = true)) {
+                filter {
+                    eq("user_id", config.userId)
+                    eq("id", receiptId)
+                }
+            }
+            Unit
         }
 
     override suspend fun getAnalyzed(receiptId: String): Outcome<AnalyzedReceipt> =
@@ -171,6 +184,12 @@ private data class ReceiptReadyPatch(
     @kotlinx.serialization.SerialName("status") val status: String,
     @kotlinx.serialization.SerialName("confidence") val confidence: Float,
     @kotlinx.serialization.SerialName("raw_ocr_json") val rawOcrJson: JsonObject,
+)
+
+/** Patch przy [SupabaseReceiptRepository.acknowledge] — odhaczenie toasta „gotowy”. */
+@kotlinx.serialization.Serializable
+private data class ReceiptAcknowledgePatch(
+    @kotlinx.serialization.SerialName("acknowledged") val acknowledged: Boolean,
 )
 
 /** Patch przy [finalize]. */

@@ -25,6 +25,9 @@ interface ReceiptService {
     /** Część wolna (mock z opóźnieniem): analiza + zapis wyniku, status → ready. */
     suspend fun runAnalysis(receiptId: String, imagePath: String?): Outcome<Unit>
 
+    /** Odhacza toast „gotowy” po kliknięciu — notyfikacja jednorazowa, nie wraca po powrocie. */
+    suspend fun acknowledgeReady(receiptId: String): Outcome<Unit>
+
     suspend fun getDraft(receiptId: String): Outcome<AnalyzedReceipt>
 
     /** Zapis po review: agreguje pozycje do per-sub-suma splits + tworzy transakcję. */
@@ -77,6 +80,9 @@ class DefaultReceiptService(
             receiptRepository.markReady(analyzed).bind()
             changeNotifier.notifyTransactionsChanged()
         }
+
+    override suspend fun acknowledgeReady(receiptId: String): Outcome<Unit> =
+        receiptRepository.acknowledge(receiptId)
 
     override suspend fun getDraft(receiptId: String): Outcome<AnalyzedReceipt> =
         receiptRepository.getAnalyzed(receiptId)

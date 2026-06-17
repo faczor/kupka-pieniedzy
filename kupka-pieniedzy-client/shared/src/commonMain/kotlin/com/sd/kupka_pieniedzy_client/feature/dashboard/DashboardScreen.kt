@@ -103,7 +103,11 @@ fun DashboardScreen() {
                 title = strings.receiptReadyTitle(ready.store),
                 subtitle = strings.receiptReadySubtitle(ready.itemCount, ready.confidencePercent),
                 actionText = strings.receiptReadyAction,
-                onClick = { nav.push(Route.Receipt(ready.receiptId)) },
+                onClick = {
+                    // Notyfikacja jednorazowa: odhacz i otwórz paragon — po powrocie toast już nie wróci.
+                    dashboardVm.acknowledgeReadyReceipt(ready.receiptId)
+                    nav.push(Route.Receipt(ready.receiptId))
+                },
                 modifier =
                     Modifier.align(Alignment.TopCenter).padding(horizontal = 14.dp, vertical = 8.dp),
             )
