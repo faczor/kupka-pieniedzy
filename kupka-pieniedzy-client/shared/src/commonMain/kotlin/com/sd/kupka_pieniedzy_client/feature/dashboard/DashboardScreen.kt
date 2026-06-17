@@ -23,6 +23,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.sd.kupka_pieniedzy_client.core.media.rememberImagePicker
 import com.sd.kupka_pieniedzy_client.core.money.MoneyFormatter
 import com.sd.kupka_pieniedzy_client.core.presentation.ScreenState
 import com.sd.kupka_pieniedzy_client.designsystem.component.AppText
@@ -44,14 +45,11 @@ import com.sd.kupka_pieniedzy_client.designsystem.theme.KupkaTheme
 import com.sd.kupka_pieniedzy_client.domain.model.DashboardSnapshot
 import com.sd.kupka_pieniedzy_client.feature.addexpense.AddExpenseViewModel
 import com.sd.kupka_pieniedzy_client.feature.addexpense.AddModeSheetContent
-import com.sd.kupka_pieniedzy_client.feature.addexpense.ReceiptPickerSheetContent
 import com.sd.kupka_pieniedzy_client.localization.LocalStrings
 import com.sd.kupka_pieniedzy_client.navigation.AppBottomBar
 import com.sd.kupka_pieniedzy_client.navigation.LocalNavigator
 import com.sd.kupka_pieniedzy_client.navigation.Route
 import org.koin.compose.viewmodel.koinViewModel
-
-private const val MOCK_IMAGE_PATH = "local://mock-receipt.jpg"
 
 @Composable
 fun DashboardScreen() {
@@ -61,7 +59,19 @@ fun DashboardScreen() {
     val state by dashboardVm.state.collectAsStateWithLifecycle()
 
     var showModeSheet by remember { mutableStateOf(false) }
-    var showPicker by remember { mutableStateOf(false) }
+
+    // Wybór zdjęcia paragonu z galerii telefonu → start (mockowej) analizy.
+    val receiptPicker =
+        rememberImagePicker { picked ->
+            if (picked != null) {
+                addVm.startReceiptAnalysis(
+                    imagePath = picked.path,
+                    // Odświeżanie Dashboardu napędza DataChangeNotifier (paragon „pending”/„ready”).
+                    onStarted = {},
+                    onCompleted = {},
+                )
+            }
+        }
 
     Box(modifier = Modifier.fillMaxSize().background(KupkaTheme.colors.surfaceBg)) {
         Column(modifier = Modifier.fillMaxSize()) {
@@ -80,7 +90,10 @@ fun DashboardScreen() {
                     onSeeAllEntries = { nav.selectTab(Route.Entries) },
                 )
             }
-            AppBottomBar(selected = 0)
+            // Dolny pasek tylko po załadowaniu — podczas Loading/Error loading state zajmuje cały ekran.
+            if (state is ScreenState.Content) {
+                AppBottomBar(selected = 0)
+            }
         }
 
         // Toast „paragon gotowy” (overlay u góry)
@@ -104,25 +117,9 @@ fun DashboardScreen() {
                 },
                 onReceipt = {
                     showModeSheet = false
-                    showPicker = true
+                    receiptPicker.launch()
                 },
                 onClose = { showModeSheet = false },
-            )
-        }
-
-        KupkaBottomSheet(visible = showPicker, onDismiss = { showPicker = false }) {
-            ReceiptPickerSheetContent(
-                onCancel = { showPicker = false },
-                onConfirm = {
-                    addVm.startReceiptAnalysis(
-                        imagePath = MOCK_IMAGE_PATH,
-                        onStarted = {
-                            showPicker = false
-                            dashboardVm.load()
-                        },
-                        onCompleted = { dashboardVm.load() },
-                    )
-                },
             )
         }
     }

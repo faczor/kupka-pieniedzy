@@ -3,6 +3,8 @@ package com.sd.kupka_pieniedzy_client.di
 import com.sd.kupka_pieniedzy_client.core.config.AppConfig
 import com.sd.kupka_pieniedzy_client.core.time.DateProvider
 import com.sd.kupka_pieniedzy_client.core.time.SystemDateProvider
+import com.sd.kupka_pieniedzy_client.domain.event.DataChangeNotifier
+import com.sd.kupka_pieniedzy_client.domain.event.DefaultDataChangeNotifier
 import com.sd.kupka_pieniedzy_client.domain.service.CategoryService
 import com.sd.kupka_pieniedzy_client.domain.service.DashboardService
 import com.sd.kupka_pieniedzy_client.domain.service.DefaultCategoryService
@@ -24,14 +26,17 @@ import org.koin.dsl.module
 fun appModule(config: AppConfig): Module = module {
     single { config }
     single<DateProvider> { SystemDateProvider() }
+    single<DataChangeNotifier> { DefaultDataChangeNotifier() }
 }
 
 /** Warstwa domenowa — Service'y komponują Repository (z `dataModule`). */
 val domainModule: Module = module {
     single<CategoryService> { DefaultCategoryService(get()) }
-    single<ExpenseService> { DefaultExpenseService(get(), get(), get()) }
+    single<ExpenseService> { DefaultExpenseService(get(), get(), get(), get()) }
     single<DashboardService> { DefaultDashboardService(get(), get(), get(), get()) }
-    single<ReceiptService> { DefaultReceiptService(get(), get(), get(), get(), get(), get()) }
+    single<ReceiptService> {
+        DefaultReceiptService(get(), get(), get(), get(), get(), get(), get())
+    }
 }
 
 /** Warstwa prezentacji — ViewModele. */

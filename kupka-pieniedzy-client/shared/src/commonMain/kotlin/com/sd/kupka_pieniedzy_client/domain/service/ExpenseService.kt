@@ -6,6 +6,7 @@ import com.sd.kupka_pieniedzy_client.core.error.ValidationRule
 import com.sd.kupka_pieniedzy_client.core.money.Money
 import com.sd.kupka_pieniedzy_client.core.result.Outcome
 import com.sd.kupka_pieniedzy_client.core.result.outcomeBinding
+import com.sd.kupka_pieniedzy_client.domain.event.DataChangeNotifier
 import com.sd.kupka_pieniedzy_client.domain.model.NewManualExpense
 import com.sd.kupka_pieniedzy_client.domain.model.Transaction
 import com.sd.kupka_pieniedzy_client.domain.repository.AccountRepository
@@ -25,6 +26,7 @@ class DefaultExpenseService(
     private val transactionRepository: TransactionRepository,
     private val accountRepository: AccountRepository,
     private val config: AppConfig,
+    private val changeNotifier: DataChangeNotifier,
 ) : ExpenseService {
 
     override suspend fun addManualExpense(
@@ -37,18 +39,21 @@ class DefaultExpenseService(
         if (categoryId.isBlank()) fail(DomainError.Validation(ValidationRule.CategoryRequired))
 
         val accountId = accountRepository.getDefaultAccountId().bind()
-        transactionRepository
-            .insertManual(
-                expense =
-                    NewManualExpense(
-                        amount = amount,
-                        categoryId = categoryId,
-                        name = name?.trim()?.ifBlank { null },
-                        date = date,
-                    ),
-                accountId = accountId,
-                currency = config.defaultCurrency,
-            )
-            .bind()
+        val transaction =
+            transactionRepository
+                .insertManual(
+                    expense =
+                        NewManualExpense(
+                            amount = amount,
+                            categoryId = categoryId,
+                            name = name?.trim()?.ifBlank { null },
+                            date = date,
+                        ),
+                    accountId = accountId,
+                    currency = config.defaultCurrency,
+                )
+                .bind()
+        changeNotifier.notifyTransactionsChanged()
+        transaction
     }
 }

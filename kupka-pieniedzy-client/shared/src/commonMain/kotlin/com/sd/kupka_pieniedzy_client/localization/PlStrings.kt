@@ -71,12 +71,6 @@ object PlStrings : Strings {
     override val fallbackToOtherHint = "Gdy nic nie pasuje → trafia do „inne”"
     override val saveExpense = "Zapisz wydatek"
 
-    override val pickReceiptTitle = "Wybierz paragon"
-    override val sourceGallery = "Galeria"
-    override val sourceFiles = "Pliki"
-    override val recent = "Ostatnie"
-    override val addAndAnalyze = "Dodaj i analizuj"
-
     override val receiptTitle = "Paragon"
 
     override fun itemsHeader(count: Int): String {

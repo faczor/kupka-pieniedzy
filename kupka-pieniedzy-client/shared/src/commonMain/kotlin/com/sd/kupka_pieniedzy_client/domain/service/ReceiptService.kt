@@ -4,8 +4,10 @@ import com.sd.kupka_pieniedzy_client.core.error.DomainError
 import com.sd.kupka_pieniedzy_client.core.error.ValidationRule
 import com.sd.kupka_pieniedzy_client.core.money.Money
 import com.sd.kupka_pieniedzy_client.core.result.Outcome
+import com.sd.kupka_pieniedzy_client.core.result.onSuccess
 import com.sd.kupka_pieniedzy_client.core.result.outcomeBinding
 import com.sd.kupka_pieniedzy_client.core.time.DateProvider
+import com.sd.kupka_pieniedzy_client.domain.event.DataChangeNotifier
 import com.sd.kupka_pieniedzy_client.domain.model.AnalyzedItem
 import com.sd.kupka_pieniedzy_client.domain.model.AnalyzedReceipt
 import com.sd.kupka_pieniedzy_client.domain.repository.AccountRepository
@@ -40,10 +42,13 @@ class DefaultReceiptService(
     private val transactionRepository: TransactionRepository,
     private val accountRepository: AccountRepository,
     private val dateProvider: DateProvider,
+    private val changeNotifier: DataChangeNotifier,
 ) : ReceiptService {
 
     override suspend fun createPendingReceipt(imagePath: String?): Outcome<String> =
-        receiptRepository.createPending(store = null, imagePath = imagePath)
+        receiptRepository
+            .createPending(store = null, imagePath = imagePath)
+            .onSuccess { changeNotifier.notifyTransactionsChanged() }
 
     override suspend fun runAnalysis(receiptId: String, imagePath: String?): Outcome<Unit> =
         outcomeBinding {
@@ -70,6 +75,7 @@ class DefaultReceiptService(
                     items = items,
                 )
             receiptRepository.markReady(analyzed).bind()
+            changeNotifier.notifyTransactionsChanged()
         }
 
     override suspend fun getDraft(receiptId: String): Outcome<AnalyzedReceipt> =
@@ -107,8 +113,11 @@ class DefaultReceiptService(
                 }
 
         receiptRepository.finalize(draft.receiptId, transactionId, splits).bind()
+        changeNotifier.notifyTransactionsChanged()
     }
 
     override suspend fun deleteReceipt(receiptId: String): Outcome<Unit> =
-        receiptRepository.delete(receiptId)
+        receiptRepository
+            .delete(receiptId)
+            .onSuccess { changeNotifier.notifyTransactionsChanged() }
 }

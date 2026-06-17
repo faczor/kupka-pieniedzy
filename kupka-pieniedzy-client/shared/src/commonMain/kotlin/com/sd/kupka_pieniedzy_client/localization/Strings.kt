@@ -66,13 +66,6 @@ interface Strings {
     val fallbackToOtherHint: String
     val saveExpense: String
 
-    // --- Wybór pliku (paragon) ---
-    val pickReceiptTitle: String
-    val sourceGallery: String
-    val sourceFiles: String
-    val recent: String
-    val addAndAnalyze: String
-
     // --- Paragon (wynik analizy) ---
     val receiptTitle: String
 

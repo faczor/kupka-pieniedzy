@@ -30,6 +30,8 @@ kotlin {
         androidMain.dependencies {
             implementation(libs.compose.uiToolingPreview)
             implementation(libs.ktor.client.okhttp)
+            // Systemowy Photo Picker (rememberLauncherForActivityResult / PickVisualMedia)
+            implementation(libs.androidx.activity.compose)
         }
         iosMain.dependencies { implementation(libs.ktor.client.darwin) }
         commonMain.dependencies {
