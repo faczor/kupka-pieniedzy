@@ -21,18 +21,29 @@ function firstText(message: MessageLike): string {
   return block.text;
 }
 
-/** Etap A: surowy tekst OCR -> ustrukturyzowany paragon (kwoty w złotych). */
+/** Etap A (Haiku vision): zdjęcie paragonu -> ustrukturyzowany paragon (kwoty w złotych). */
 export async function extractReceipt(
   client: Anthropic,
   model: string,
-  ocrText: string,
+  imageBase64: string,
+  mediaType: string,
 ): Promise<ExtractedReceipt> {
-  const prompt = render(extractPromptTemplate, { OCR_DATA: ocrText });
   const message = await client.messages.create({
     model,
     max_tokens: 4096,
     system: JSON_ONLY_SYSTEM,
-    messages: [{ role: "user", content: prompt }],
+    messages: [
+      {
+        role: "user",
+        content: [
+          {
+            type: "image",
+            source: { type: "base64", media_type: mediaType, data: imageBase64 },
+          },
+          { type: "text", text: extractPromptTemplate },
+        ],
+      },
+    ],
   });
 
   const parsed = parseJsonObject(firstText(message)) as Record<string, unknown>;

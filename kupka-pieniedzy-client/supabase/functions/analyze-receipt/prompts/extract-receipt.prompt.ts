@@ -2,8 +2,8 @@
 // opakowanie w `export default` szablon jest tylko po to, by plik na pewno wszedł do
 // bundla Edge Function. Placeholdery {{...}} podmienia render() z ../prompts.ts.
 //
-// Zmienne:
-//   {{OCR_DATA}} — surowy tekst z OCR (Cloud Vision) do zanalizowania
+// Wejściem jest ZDJĘCIE paragonu (Claude/Haiku vision) — obraz dołączany jest jako
+// osobny blok content obok tego promptu; ten plik nie ma już placeholderów.
 //
 // NIE używaj w treści backticków ani sekwencji ${ — to literał szablonu JS.
 
@@ -11,8 +11,9 @@ export default `<prompt>
     <role>Receipt analyst specialized in Polish store receipts (paragony fiskalne)</role>
 
     <instructions>
-        <instruction>Analyse the OCR text of a single Polish store receipt provided in the ocr_data tag</instruction>
-        <instruction>Study the examples - each contains OCR text and the expected JSON result</instruction>
+        <instruction>Analyse the photo of a single Polish store receipt (paragon) attached to this message</instruction>
+        <instruction>Read every line of text visible on the receipt image, including faint thermal print</instruction>
+        <instruction>Study the examples - each shows a receipt's text content and the expected JSON result</instruction>
         <instruction>Extract every field described in the json-fields tag</instruction>
         <instruction>For each product line use the FINAL price actually charged (after any rabat/promocja), not the unit price</instruction>
         <instruction>Ignore non-product lines: SUMA / RAZEM / PODSUMA, PTU / VAT summaries, payment lines (GOTÓWKA / KARTA / BLIK / PRZELEW), change (RESZTA), loyalty points, NIP, addresses, headers and footers</instruction>
@@ -28,7 +29,7 @@ export default `<prompt>
     </instructions>
 
     <flow>
-        <step>Read the OCR text from the ocr_data tag</step>
+        <step>Read all text visible on the receipt image</step>
         <step>Identify the store / merchant name (e.g. Biedronka, Lidl, Żabka, Auchan)</step>
         <step>Identify the purchase date and normalise it to ISO yyyy-mm-dd</step>
         <step>Identify every purchased product line and its final charged amount</step>
@@ -214,8 +215,4 @@ export default `<prompt>
             </output>
         </example>
     </examples>
-
-    <ocr_data>
-{{OCR_DATA}}
-    </ocr_data>
 </prompt>`;

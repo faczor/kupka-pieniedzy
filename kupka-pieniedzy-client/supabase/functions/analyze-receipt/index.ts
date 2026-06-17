@@ -1,11 +1,10 @@
 // Edge Function `analyze-receipt`
-// Pipeline: Cloud Vision (OCR) -> Claude (strukturyzacja) -> kategoryzacja
-// (exact-match z pamięci product_categories + LLM few-shot dla reszty).
+// Pipeline (wszystko przez Anthropic): Haiku vision (zdjęcie -> struktura)
+// -> kategoryzacja (exact-match z pamięci product_categories + LLM few-shot dla reszty).
 // Funkcja jest "czysta": liczy wynik i go ZWRACA — nie pisze do `receipts`.
 // Czyta: obraz ze Storage, kategorie i pamięć kategoryzacji z DB (service role).
 import { encodeBase64 } from "jsr:@std/encoding@1/base64";
 import { corsHeaders } from "../_shared/cors.ts";
-import { runOcr } from "./vision.ts";
 import { Anthropic, categorizeItems, extractReceipt } from "./anthropic.ts";
 import { fetchCategories, fetchMemory, serviceClient } from "./db.ts";
 import type { AnalyzeRequest, AnalyzeResponse, CategoryExample } from "./types.ts";
@@ -33,6 +32,15 @@ function json(body: unknown, status = 200): Response {
 function stripDataUrl(b64: string): string {
   const comma = b64.indexOf(",");
   return b64.startsWith("data:") && comma !== -1 ? b64.slice(comma + 1) : b64;
+}
+
+/** Wykrywa media_type po sygnaturze base64 (Claude vision tego wymaga). Default jpeg. */
+function detectMediaType(b64: string): string {
+  if (b64.startsWith("/9j/")) return "image/jpeg";
+  if (b64.startsWith("iVBORw0KGgo")) return "image/png";
+  if (b64.startsWith("R0lGOD")) return "image/gif";
+  if (b64.startsWith("UklGR")) return "image/webp";
+  return "image/jpeg";
 }
 
 function requireEnv(name: string): string {
@@ -101,15 +109,8 @@ async function analyze(req: AnalyzeRequest): Promise<AnalyzeResponse> {
   const bucket = req.bucket ?? DEFAULT_BUCKET;
 
   const imageBase64 = await loadImageBase64(req, bucket);
+  const mediaType = detectMediaType(imageBase64);
   const { categories, memory } = await resolveContext(req);
-
-  // OCR
-  let ocrText: string;
-  try {
-    ocrText = await runOcr(imageBase64, requireEnv("GOOGLE_CLOUD_VISION_API_KEY"));
-  } catch (e) {
-    throw new ApiFault("ocr_failed", (e as Error).message, 502);
-  }
 
   const client = new Anthropic({ apiKey: requireEnv("ANTHROPIC_API_KEY") });
   const allowed = new Set(categories);
@@ -121,8 +122,8 @@ async function analyze(req: AnalyzeRequest): Promise<AnalyzeResponse> {
   let amountsMinor: number[];
   let cats: (string | null)[];
   try {
-    // Etap A
-    const extracted = await extractReceipt(client, EXTRACTION_MODEL, ocrText);
+    // Etap A (Haiku vision: zdjęcie -> struktura)
+    const extracted = await extractReceipt(client, EXTRACTION_MODEL, imageBase64, mediaType);
     store = extracted.store;
     date = extracted.date;
     parsedTotal = extracted.total;

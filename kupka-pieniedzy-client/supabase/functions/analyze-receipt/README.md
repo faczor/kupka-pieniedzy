@@ -7,21 +7,21 @@ zwraca ustrukturyzowany wynik gotowy do zbudowania `RawReceiptAnalysis`.
 
 ```
 obraz (Storage / base64)
-   └─ OCR ────────────► Google Cloud Vision (DOCUMENT_TEXT_DETECTION, languageHints=["pl"])
-   └─ Strukturyzacja ─► Claude (Haiku) tekst → { sklep, data, total, items[{nazwa, kwota}] }
+   └─ Ekstrakcja ─────► Claude Haiku (vision) zdjęcie → { sklep, data, total, items[{nazwa, kwota}] }
    └─ Kategoryzacja ──► exact-match z pamięci (product_categories) → reszta: Claude (Haiku)
                         z few-shot z historii usera → fallback "inne"
    └─ Walidacja ──────► total = SUM(items); confidence z heurystyki
 ```
 
-Funkcja jest **czysta** — liczy i **zwraca** wynik, **nie pisze** do tabeli `receipts`.
-Zapis (`markReady`) i mapowanie nazw kategorii → `category_id` robi klient, tak jak dziś.
+Wszystko idzie przez Anthropic — **dwa calle do Haiku** (vision-ekstrakcja + kategoryzacja),
+bez zewnętrznego OCR. Funkcja jest **czysta** — liczy i **zwraca** wynik, **nie pisze** do
+tabeli `receipts`. Zapis (`markReady`) i mapowanie nazw kategorii → `category_id` robi klient.
 Funkcja czyta (service role): obraz ze Storage, kategorie usera i pamięć kategoryzacji z DB.
 
 > **Notka (przyszłe rozszerzenie):** wstępny **OCR on-device** (ML Kit na Androidzie,
 > Apple Vision na iOS, przez `expect`/`actual`) można dołożyć **przed** wysyłką do chmury —
-> jako darmowa/prywatna „fast path", z fallbackiem na Cloud Vision. Pipeline strukturyzacji
-> i kategoryzacji się nie zmienia (źródło tekstu jest wymienne).
+> jako darmowa/prywatna „fast path". Wtedy Etap A dostawałby tekst zamiast obrazu; reszta
+> pipeline'u się nie zmienia.
 
 ## Prompty
 
@@ -31,7 +31,7 @@ wysyłką (`prompts.ts` → `render`).
 
 | Plik | Zmienne | Rola |
 |------|---------|------|
-| `prompts/extract-receipt.prompt.ts`   | `{{OCR_DATA}}`              | Etap A: tekst OCR → JSON paragonu |
+| `prompts/extract-receipt.prompt.ts`   | (brak — wejściem jest obraz) | Etap A: zdjęcie (vision) → JSON paragonu |
 | `prompts/categorize-items.prompt.ts`  | `{{USER_HISTORY}}`, `{{CATEGORIES}}`, `{{ITEMS}}` | Etap B: pozycje → kategorie |
 
 Treść w środku to czysty prompt; opakowanie `export default \`...\`` służy tylko temu, by
@@ -153,16 +153,14 @@ Body: `{ "error": { "code": "...", "message": "..." } }`.
 |------|---------------------|-------|
 | 400  | `invalid_request`   | zły body, brak `categories`, brak/niedostępny obraz |
 | 405  | `method_not_allowed`| metoda inna niż POST |
-| 502  | `ocr_failed`        | Cloud Vision odmówił / pusty tekst |
-| 502  | `analysis_failed`   | błąd modelu (strukturyzacja/kategoryzacja) |
+| 502  | `analysis_failed`   | błąd modelu (vision-ekstrakcja lub kategoryzacja) |
 | 500  | `internal`          | brak env / nieoczekiwany błąd |
 
 ## Zmienne środowiskowe (sekrety)
 
 | Nazwa                        | Źródło                  | Opis |
 |------------------------------|-------------------------|------|
-| `ANTHROPIC_API_KEY`          | **ustawiasz**           | klucz Claude API |
-| `GOOGLE_CLOUD_VISION_API_KEY`| **ustawiasz**           | klucz Google Cloud z włączonym Cloud Vision API |
+| `ANTHROPIC_API_KEY`          | **ustawiasz**           | klucz Claude API (vision + tekst) |
 | `SUPABASE_URL`               | auto (Supabase)         | wstrzykiwany w deployu |
 | `SUPABASE_SERVICE_ROLE_KEY`  | auto (Supabase)         | wstrzykiwany w deployu; pobiera obraz ze Storage |
 | `RECEIPTS_BUCKET`            | opcjonalnie             | domyślnie `receipts` |
@@ -172,10 +170,8 @@ Body: `{ "error": { "code": "...", "message": "..." } }`.
 Ustawienie sekretów (cloud):
 
 ```bash
-supabase secrets set \
-  ANTHROPIC_API_KEY=sk-ant-... \
-  GOOGLE_CLOUD_VISION_API_KEY=AIza...
-# opcjonalnie podbij jakość kosztem ceny:
+supabase secrets set ANTHROPIC_API_KEY=sk-ant-...
+# opcjonalnie podbij jakość ekstrakcji kosztem ceny (trudne paragony termiczne):
 # supabase secrets set EXTRACTION_MODEL=claude-sonnet-4-6
 ```
 
@@ -255,7 +251,7 @@ val response = supabase.functions.invoke(
 
 ## Koszt (orientacyjnie, Haiku 4.5)
 
-~**$0.005 / paragon**: Cloud Vision ~$0.0015 (pierwsze 1000/mies. gratis) + strukturyzacja
-~$0.002 + kategoryzacja ~$0.002. **Exact-match z pamięci** zbija koszt kategoryzacji —
-gdy wszystkie pozycje są znane, drugiego calla nie ma (0 zł). Podbicie ekstrakcji na
-Sonnet/Opus (env) ≈ ×3–×5.
+~**$0.005 / paragon** (Haiku): vision-ekstrakcja (obraz ~1500 tok. + output) ~$0.003 +
+kategoryzacja ~$0.002. **Exact-match z pamięci** zbija koszt kategoryzacji — gdy wszystkie
+pozycje są znane, drugiego calla nie ma (0 zł). Podbicie `EXTRACTION_MODEL` na Sonnet/Opus
+(env) ≈ ×3–×5.
