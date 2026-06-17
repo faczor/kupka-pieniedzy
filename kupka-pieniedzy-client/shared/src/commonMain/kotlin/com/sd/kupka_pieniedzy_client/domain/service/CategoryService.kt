@@ -22,7 +22,6 @@ interface CategoryService {
 
     suspend fun countEntries(categoryId: String): Outcome<Int>
 
-    /** Usuwa (dezaktywuje) kategorię. Domyślnej („inne") nie wolno usunąć. */
     suspend fun deleteCategory(category: Category, moveEntriesToId: String?): Outcome<Unit>
 }
 
@@ -60,7 +59,6 @@ class DefaultCategoryService(private val categoryRepository: CategoryRepository)
         category: Category,
         moveEntriesToId: String?,
     ): Outcome<Unit> = outcomeBinding {
-        // Domyślna „inne" jest workiem-fallbackiem — nieusuwalna (D6/D21).
         if (category.isDefault)
             fail(DomainError.Validation(ValidationRule.DefaultCategoryImmutable))
         categoryRepository.deactivate(category.id, moveEntriesToId).bind()

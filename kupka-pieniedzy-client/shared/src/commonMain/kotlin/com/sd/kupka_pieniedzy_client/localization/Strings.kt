@@ -117,7 +117,6 @@ interface Strings {
 
     val categoryAddErrorTitle: String
 
-    // --- Zarządzanie kategoriami (edycja / usuwanie) ---
     val swipeEdit: String
     val swipeDelete: String
     val defaultCannotDelete: String

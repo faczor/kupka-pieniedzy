@@ -135,7 +135,6 @@ class SupabaseCategoryRepository(
                     }
                 }
 
-            // Budżet bieżącego miesiąca: nadpisujemy (usuń stary z okresu, wstaw nowy jeśli podany).
             val (start, end) =
                 com.sd.kupka_pieniedzy_client.core.time.monthRange(dateProvider.today())
             deleteCurrentBudgets(id, start.toString(), end.toString())
@@ -153,7 +152,6 @@ class SupabaseCategoryRepository(
                     )
             }
 
-            // Odczyt świeżego wiersza (wzorzec jak w getById) — kontrakt zwraca pełną kategorię.
             val dto =
                 supabase.postgrest
                     .from("categories")
@@ -192,7 +190,6 @@ class SupabaseCategoryRepository(
 
     override suspend fun deactivate(categoryId: String, moveEntriesToId: String?): Outcome<Unit> =
         runCatchingDomain(supabase.isConfigured) {
-            // Opcja „Przenieś wpisy" → przepnij transakcje i splity na nową kategorię.
             if (moveEntriesToId != null) {
                 supabase.postgrest
                     .from("transactions")
@@ -208,7 +205,6 @@ class SupabaseCategoryRepository(
                         filter { eq("category_id", categoryId) }
                     }
             }
-            // Budżet kategorii znika razem z nią.
             supabase.postgrest
                 .from("budgets")
                 .delete {
@@ -217,7 +213,6 @@ class SupabaseCategoryRepository(
                         eq("category_id", categoryId)
                     }
                 }
-            // Miękkie usunięcie — kategoria zostaje w bazie (historia), znika z listy/pickerów.
             supabase.postgrest
                 .from("categories")
                 .update(CategoryActivePatch(active = false)) {
@@ -246,7 +241,6 @@ class SupabaseCategoryRepository(
         supabase.postgrest
             .from("categories")
             .select {
-                // Soft-delete (0004): dezaktywowane kategorie znikają z listy i pickerów.
                 filter {
                     eq("user_id", config.userId)
                     eq("active", true)
@@ -284,7 +278,6 @@ private data class BudgetInsertRow(
     @kotlinx.serialization.SerialName("period_end") val periodEnd: String,
 )
 
-/** Patch edycji kategorii (nazwa + prezentacja). */
 @kotlinx.serialization.Serializable
 private data class CategoryPatch(
     @kotlinx.serialization.SerialName("name") val name: String,
@@ -292,18 +285,15 @@ private data class CategoryPatch(
     @kotlinx.serialization.SerialName("color") val color: String,
 )
 
-/** Patch dezaktywacji (soft-delete). */
 @kotlinx.serialization.Serializable
 private data class CategoryActivePatch(
     @kotlinx.serialization.SerialName("active") val active: Boolean,
 )
 
-/** Patch przepięcia wpisu na inną kategorię (transactions / receipt_category_splits). */
 @kotlinx.serialization.Serializable
 private data class CategoryRefPatch(
     @kotlinx.serialization.SerialName("category_id") val categoryId: String,
 )
 
-/** Lekki wiersz tylko z `id` — do liczenia wpisów. */
 @kotlinx.serialization.Serializable
 private data class IdRow(@kotlinx.serialization.SerialName("id") val id: String)

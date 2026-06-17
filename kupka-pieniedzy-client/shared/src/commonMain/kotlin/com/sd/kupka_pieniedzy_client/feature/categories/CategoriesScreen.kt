@@ -110,7 +110,6 @@ fun CategoriesScreen() {
             AppBottomBar(selected = 2)
         }
 
-        // Sheet: nowa kategoria
         KupkaBottomSheet(visible = showCreate, onDismiss = { showCreate = false }) {
             AddCategorySheetContent(
                 viewModel = vm,
@@ -122,7 +121,6 @@ fun CategoriesScreen() {
             )
         }
 
-        // Sheet: edycja kategorii
         KupkaBottomSheet(visible = editForm != null, onDismiss = vm::closeEdit) {
             editForm?.let { form ->
                 EditCategorySheetContent(
@@ -135,7 +133,6 @@ fun CategoriesScreen() {
             }
         }
 
-        // Sheet: usuwanie — decyzja o wpisach (lub proste potwierdzenie)
         val showDeleteSheet = deleteFlow != null && deleteFlow?.showTargetPicker != true
         KupkaBottomSheet(visible = showDeleteSheet, onDismiss = vm::closeDelete) {
             deleteFlow?.let { state ->
@@ -143,7 +140,6 @@ fun CategoriesScreen() {
             }
         }
 
-        // Sheet: wybór kategorii docelowej
         val showTargetPicker = deleteFlow?.showTargetPicker == true
         KupkaBottomSheet(visible = showTargetPicker, onDismiss = vm::closeTargetPicker) {
             deleteFlow?.let { state ->
@@ -157,10 +153,6 @@ fun CategoriesScreen() {
     }
 }
 
-/**
- * Wiersz z akcjami ujawnianymi przez przesunięcie w lewo (Edytuj / Usuń). Domyślna „inne" nie jest
- * tu opakowana — jest nieusuwalna.
- */
 @Composable
 private fun SwipeRevealRow(
     onEdit: () -> Unit,

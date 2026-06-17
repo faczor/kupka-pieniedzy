@@ -36,7 +36,6 @@ data class NewCategoryForm(
         get() = !saving && name.isNotBlank()
 }
 
-/** Stan sheetu „Edytuj kategorię”. Prefill z istniejącej kategorii. */
 data class EditCategoryForm(
     val id: String,
     val name: String,
@@ -53,10 +52,6 @@ data class EditCategoryForm(
         get() = !saving && name.isNotBlank()
 }
 
-/**
- * Stan flow usuwania kategorii. [entryCount] = null dopóki liczymy wpisy. Gdy 0 → wariant
- * „pusta kategoria" (od razu, bez pytań). Gdy > 0 → wybór: przenieś / zostaw.
- */
 data class DeleteFlowState(
     val category: Category,
     val entryCount: Int? = null,
@@ -107,8 +102,6 @@ class CategoriesViewModel(
     private fun currentCategories(): List<Category> =
         (_list.value as? ScreenState.Content<List<Category>>)?.value.orEmpty()
 
-    // --- Tworzenie ---
-
     fun resetForm() = _form.update { NewCategoryForm() }
 
     fun onNameChange(value: String) = _form.update { it.copy(name = value) }
@@ -151,8 +144,6 @@ class CategoriesViewModel(
                 )
         }
     }
-
-    // --- Edycja ---
 
     fun startEdit(category: Category) {
         _editForm.value =
@@ -212,9 +203,6 @@ class CategoriesViewModel(
         }
     }
 
-    // --- Usuwanie ---
-
-    /** Z akcji swipe „Usuń". */
     fun startDelete(category: Category) {
         if (category.isDefault) return
         val defaultTarget = firstTargetFor(category)
@@ -223,7 +211,6 @@ class CategoriesViewModel(
         loadEntryCount(category)
     }
 
-    /** Z linku „Usuń kategorię" w sheecie edycji — zamyka edycję, otwiera flow usuwania. */
     fun requestDeleteFromEdit() {
         val id = _editForm.value?.id ?: return
         val category = currentCategories().firstOrNull { it.id == id } ?: return
@@ -242,8 +229,6 @@ class CategoriesViewModel(
                         }
                     },
                     onFailure = {
-                        // Nie blokuj usuwania. Soft-delete i tak zachowuje etykiety wpisów,
-                        // więc proste potwierdzenie (bez przenoszenia) jest bezpiecznym domyślnym.
                         _deleteFlow.update { state ->
                             state?.takeIf { it.category.id == category.id }?.copy(entryCount = 0)
                         }
@@ -268,7 +253,6 @@ class CategoriesViewModel(
     fun selectTarget(id: String) =
         _deleteFlow.update { it?.copy(moveTargetId = id, showTargetPicker = false) }
 
-    /** Kategorie, do których można przenieść wpisy (wszystkie poza usuwaną). */
     fun moveTargets(): List<Category> {
         val deletingId = _deleteFlow.value?.category?.id
         return currentCategories().filter { it.id != deletingId }
@@ -277,7 +261,6 @@ class CategoriesViewModel(
     fun confirmDelete() {
         val state = _deleteFlow.value ?: return
         if (state.deleting) return
-        // Przenosimy tylko gdy są wpisy i wybrano „przenieś" z poprawnym celem.
         val hasEntries = (state.entryCount ?: 0) != 0
         val moveTo =
             if (hasEntries && state.moveSelected) state.moveTargetId else null
@@ -309,7 +292,6 @@ class CategoriesViewModel(
     }
 }
 
-/** Budżet → tekst do prefill pola (bez „.0" dla pełnych złotych). */
 private fun Money?.toBudgetText(): String {
     if (this == null) return ""
     return if (minorUnits % 100 == 0L) (minorUnits / 100).toString()

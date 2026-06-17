@@ -33,11 +33,6 @@ import com.sd.kupka_pieniedzy_client.designsystem.theme.parseHexColor
 import com.sd.kupka_pieniedzy_client.domain.model.Category
 import com.sd.kupka_pieniedzy_client.localization.LocalStrings
 
-/**
- * Sheet usuwania kategorii. Dwa warianty zależnie od liczby wpisów:
- * - 0 wpisów (Frame 08) → proste potwierdzenie, bez pytań.
- * - > 0 wpisów (Frame 07) → decyzja: przenieś / zostaw.
- */
 @Composable
 fun ColumnScope.DeleteCategorySheetContent(
     state: DeleteFlowState,
@@ -52,7 +47,6 @@ fun ColumnScope.DeleteCategorySheetContent(
 
     when (state.entryCount) {
         null -> {
-            // Liczymy wpisy — krótki stan ładowania.
             TargetCard(category = category, subtitle = "…", trailingBudget = false)
             Spacer(Modifier.height(24.dp))
         }
@@ -125,7 +119,6 @@ private fun ColumnScope.WithEntriesVariant(
     FormLabel(strings.whatToDoWithEntries(count))
     Spacer(Modifier.height(11.dp))
 
-    // Opcja A — przenieś
     Column(
         modifier =
             Modifier.fillMaxWidth()
@@ -189,7 +182,6 @@ private fun ColumnScope.WithEntriesVariant(
     }
     Spacer(Modifier.height(11.dp))
 
-    // Opcja B — zostaw
     Row(
         modifier =
             Modifier.fillMaxWidth()
@@ -319,7 +311,6 @@ private fun PrimaryButtonDanger(text: String, loading: Boolean, onClick: () -> U
     }
 }
 
-/** Sheet wyboru kategorii docelowej dla przeniesienia wpisów (Frame 09). */
 @Composable
 fun ColumnScope.MoveTargetSheetContent(
     state: DeleteFlowState,

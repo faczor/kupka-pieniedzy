@@ -31,10 +31,6 @@ import com.sd.kupka_pieniedzy_client.designsystem.theme.KupkaTheme
 import com.sd.kupka_pieniedzy_client.designsystem.theme.parseHexColor
 import com.sd.kupka_pieniedzy_client.localization.LocalStrings
 
-/**
- * Sheet „Edytuj kategorię" (Frame 06). Nazwa + ikona + kolor + budżet (prefill) → „Zapisz zmiany",
- * pod spodem destrukcyjny link „Usuń kategorię" otwierający flow usuwania.
- */
 @Composable
 fun ColumnScope.EditCategorySheetContent(
     form: EditCategoryForm,
@@ -50,7 +46,6 @@ fun ColumnScope.EditCategorySheetContent(
     SheetHeader(title = strings.editCategory, onClose = onClose)
     Spacer(Modifier.height(20.dp))
 
-    // Podgląd
     Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
         Row(
             modifier =

@@ -31,14 +31,8 @@ interface CategoryRepository {
 
     suspend fun update(id: String, input: EditCategory): Outcome<Category>
 
-    /** Liczba wpisów (transakcje + splity paragonów) wskazujących tę kategorię. */
     suspend fun countEntries(categoryId: String): Outcome<Int>
 
-    /**
-     * „Usuwa" kategorię — pod spodem dezaktywacja (soft-delete). Gdy [moveEntriesToId] != null,
-     * wpisy zostają najpierw przepięte na wskazaną kategorię; gdy null — zostają przy starej
-     * (znika tylko z listy i wyboru przy nowych wydatkach). Budżet kategorii jest usuwany.
-     */
     suspend fun deactivate(categoryId: String, moveEntriesToId: String?): Outcome<Unit>
 }
 

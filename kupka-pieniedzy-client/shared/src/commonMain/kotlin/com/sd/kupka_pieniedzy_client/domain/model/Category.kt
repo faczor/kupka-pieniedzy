@@ -33,7 +33,6 @@ data class NewCategory(
     val monthlyBudget: Money?,
 )
 
-/** Dane edycji istniejącej kategorii (sheet „Edytuj kategorię”). */
 data class EditCategory(
     val name: String,
     val icon: String,
