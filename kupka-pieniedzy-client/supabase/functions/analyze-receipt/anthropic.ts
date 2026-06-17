@@ -2,7 +2,7 @@
 // Prompty żyją w osobnych plikach (./prompts/*.prompt.ts) w stylu XML z few-shot
 // przykładami; tutaj tylko renderujemy zmienne, wysyłamy i parsujemy JSON.
 import Anthropic from "npm:@anthropic-ai/sdk@0.39.0";
-import type { ExtractedReceipt } from "./types.ts";
+import type { CategoryExample, ExtractedReceipt } from "./types.ts";
 import extractPromptTemplate from "./prompts/extract-receipt.prompt.ts";
 import categorizePromptTemplate from "./prompts/categorize-items.prompt.ts";
 import { parseJsonObject, render } from "./prompts.ts";
@@ -10,10 +10,6 @@ import { parseJsonObject, render } from "./prompts.ts";
 const JSON_ONLY_SYSTEM =
   "You are a precise extraction engine. Respond with a single JSON object only — " +
   "no prose, no markdown, no code fences.";
-
-// Catch-all kategoria. Gdy istnieje na liście usera, nieprzypisane pozycje lądują tutaj
-// zamiast jako null (zgodnie z seedem: kategoria L1 "inne"). Ewentualnie do env w przyszłości.
-const FALLBACK_CATEGORY = "inne";
 
 // Strukturalny typ zamiast Anthropic.Message — niezależny od wersji SDK.
 type ContentBlockLike = { type: string; text?: string };
@@ -58,19 +54,26 @@ export async function extractReceipt(
 }
 
 /**
- * Etap B: dla każdej pozycji zwróć nazwę kategorii z `categories` albo null.
- * Wynik jest indeksowany; nieznane/halucynowane kategorie mapujemy na null.
+ * Etap B (LLM): dla każdej pozycji zwróć nazwę kategorii z `categories` albo null.
+ * `history` to spersonalizowane przykłady usera (few-shot). Bez fallbacku — fallback
+ * do "inne" robi orkiestracja (index.ts) na całej, scalonej liście.
  */
 export async function categorizeItems(
   client: Anthropic,
   model: string,
   itemNames: string[],
   categories: string[],
+  history: CategoryExample[],
 ): Promise<(string | null)[]> {
   if (itemNames.length === 0) return [];
 
   const allowed = new Set(categories);
+  const historyBlock = history.length > 0
+    ? history.map((h) => `${h.name} => ${h.category}`).join("\n")
+    : "(brak historii — nowy użytkownik)";
+
   const prompt = render(categorizePromptTemplate, {
+    USER_HISTORY: historyBlock,
     CATEGORIES: categories.join("\n"),
     ITEMS: itemNames.map((n, i) => `${i}. ${n}`).join("\n"),
   });
@@ -92,13 +95,6 @@ export async function categorizeItems(
     const cat = o.category;
     if (!Number.isInteger(idx) || idx < 0 || idx >= itemNames.length) continue;
     result[idx] = typeof cat === "string" && allowed.has(cat) ? cat : null;
-  }
-
-  // Zabezpieczenie: nieprzypisane -> "inne", jeśli ta kategoria jest dostępna.
-  if (allowed.has(FALLBACK_CATEGORY)) {
-    for (let i = 0; i < result.length; i++) {
-      if (result[i] === null) result[i] = FALLBACK_CATEGORY;
-    }
   }
   return result;
 }

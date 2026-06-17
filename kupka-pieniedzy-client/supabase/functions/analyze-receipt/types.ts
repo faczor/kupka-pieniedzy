@@ -2,7 +2,13 @@
 // Kwoty na wyjściu są w jednostkach podrzędnych (grosze) — spójnie z klientem
 // (com.sd.kupka_pieniedzy_client.core.money.Money) i `RawOcrJson`.
 
-/** Żądanie do funkcji. Podaj `imagePath` (obiekt w buckecie Storage) LUB `imageBase64`. */
+/** Para nazwa→kategoria: historia kategoryzacji usera (few-shot) i/lub override do testów. */
+export interface CategoryExample {
+  name: string;
+  category: string;
+}
+
+/** Żądanie do funkcji. Podaj `imagePath` (obiekt w Storage) LUB `imageBase64`. */
 export interface AnalyzeRequest {
   /** Ścieżka obiektu w prywatnym buckecie Storage (np. "userId/receiptId.jpg"). */
   imagePath?: string;
@@ -10,10 +16,17 @@ export interface AnalyzeRequest {
   imageBase64?: string;
   /** Nadpisanie nazwy bucketu; domyślnie env RECEIPTS_BUCKET lub "receipts". */
   bucket?: string;
-  /** Kandydaci kategorii — NAZWY (po polsku), dokładnie jak w `categories.name`. */
-  categories: string[];
+  /**
+   * Id usera — funkcja po nim odpytuje kategorie i pamięć (product_categories).
+   * Wymagane, chyba że podasz `categories` (tryb testowy bez DB).
+   */
+  userId?: string;
   /** Kod waluty; domyślnie "PLN". */
   currency?: string;
+  /** Override listy kategorii (NAZWY). Gdy podany — pomija odczyt z DB (test/curl). */
+  categories?: string[];
+  /** Override historii few-shot. Gdy podany — pomija odczyt product_categories (test/curl). */
+  examples?: CategoryExample[];
 }
 
 /** Pojedyncza pozycja wyniku — gotowa do zbudowania RawAnalyzedItem po stronie klienta. */
@@ -21,7 +34,7 @@ export interface AnalyzedItem {
   name: string;
   /** Grosze (minor units), liczba całkowita. */
   amountMinor: number;
-  /** Nazwa kategorii z listy `categories` albo null, gdy model nie był pewny. */
+  /** Nazwa kategorii z listy kategorii usera albo null. */
   suggestedCategory: string | null;
 }
 
@@ -42,7 +55,7 @@ export interface AnalyzeResponse {
 export interface ExtractedReceipt {
   store: string;
   date: string | null;
-  /** Suma z paragonu w jednostkach głównych (np. 56.84) albo null. */
+  /** Kwota do zapłaty w jednostkach głównych (DO ZAPŁATY / SUMA) albo null. */
   total: number | null;
   items: { name: string; amount: number }[];
 }

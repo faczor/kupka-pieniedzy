@@ -3,8 +3,9 @@
 // Placeholdery {{...}} podmienia render() z ../prompts.ts.
 //
 // Zmienne:
-//   {{CATEGORIES}} — dozwolone NAZWY kategorii (po jednej w linii), z categories.name usera
-//   {{ITEMS}}      — pozycje do skategoryzowania, format "<index>. <nazwa>" po jednej w linii
+//   {{USER_HISTORY}} — historia kategoryzacji usera ("nazwa => kategoria" po jednej w linii)
+//   {{CATEGORIES}}   — dozwolone NAZWY kategorii (po jednej w linii), z categories.name usera
+//   {{ITEMS}}        — pozycje do skategoryzowania, format "<index>. <nazwa>" po jednej w linii
 //
 // NIE używaj w treści backticków ani sekwencji ${.
 
@@ -15,6 +16,7 @@ export default `<prompt>
         <instruction>Assign each item from the items tag to exactly one category from the categories tag</instruction>
         <instruction>Study the examples - they show items and the expected assignments</instruction>
         <instruction>Match by what the product actually is, not by brand alone (an energy drink belongs to energetyki even if branded)</instruction>
+        <instruction>The user_history tag lists how THIS user categorized items in the past, including their manual corrections - treat it as the STRONGEST signal: if an item matches or closely resembles a user_history entry, follow that categorization even over your own intuition</instruction>
         <instruction>Use a category string ONLY if it appears verbatim in the categories tag</instruction>
         <instruction>When no specific category clearly fits, use the catch-all category "inne" if it is present in the list; only use null if there is no catch-all category</instruction>
         <instruction>A returnable-packaging deposit line ("Kaucja (opakowanie zwrotne)") belongs to the catch-all "inne"</instruction>
@@ -84,6 +86,10 @@ export default `<prompt>
             </output>
         </example>
     </examples>
+
+    <user_history>
+{{USER_HISTORY}}
+    </user_history>
 
     <categories>
 {{CATEGORIES}}

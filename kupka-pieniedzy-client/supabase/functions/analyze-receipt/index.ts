@@ -1,25 +1,24 @@
 // Edge Function `analyze-receipt`
-// Pipeline: Cloud Vision (OCR) -> Claude (strukturyzacja) -> Claude (kategoryzacja).
-// Funkcja jest "czysta": liczy wynik analizy i go ZWRACA — nie pisze do tabeli `receipts`
-// (zapis/markReady robi klient, tak jak dziś z mockiem). Czyta wyłącznie obraz ze Storage.
-import { createClient } from "npm:@supabase/supabase-js@2";
+// Pipeline: Cloud Vision (OCR) -> Claude (strukturyzacja) -> kategoryzacja
+// (exact-match z pamięci product_categories + LLM few-shot dla reszty).
+// Funkcja jest "czysta": liczy wynik i go ZWRACA — nie pisze do `receipts`.
+// Czyta: obraz ze Storage, kategorie i pamięć kategoryzacji z DB (service role).
 import { encodeBase64 } from "jsr:@std/encoding@1/base64";
 import { corsHeaders } from "../_shared/cors.ts";
 import { runOcr } from "./vision.ts";
 import { Anthropic, categorizeItems, extractReceipt } from "./anthropic.ts";
-import type { AnalyzeRequest, AnalyzeResponse } from "./types.ts";
+import { fetchCategories, fetchMemory, serviceClient } from "./db.ts";
+import type { AnalyzeRequest, AnalyzeResponse, CategoryExample } from "./types.ts";
 
 const DEFAULT_BUCKET = Deno.env.get("RECEIPTS_BUCKET") ?? "receipts";
 const EXTRACTION_MODEL = Deno.env.get("EXTRACTION_MODEL") ?? "claude-haiku-4-5";
 const CATEGORIZATION_MODEL =
   Deno.env.get("CATEGORIZATION_MODEL") ?? "claude-haiku-4-5";
+// Catch-all; nieprzypisane pozycje lądują tutaj zamiast jako null (seed: kategoria L1 "inne").
+const FALLBACK_CATEGORY = "inne";
 
 class ApiFault extends Error {
-  constructor(
-    public code: string,
-    message: string,
-    public status: number,
-  ) {
+  constructor(public code: string, message: string, public status: number) {
     super(message);
   }
 }
@@ -42,19 +41,14 @@ function requireEnv(name: string): string {
   return v;
 }
 
-async function loadImageBase64(
-  req: AnalyzeRequest,
-  bucket: string,
-): Promise<string> {
+const norm = (s: string) => s.trim().toLowerCase();
+
+async function loadImageBase64(req: AnalyzeRequest, bucket: string): Promise<string> {
   if (req.imageBase64) return stripDataUrl(req.imageBase64);
   if (!req.imagePath) {
     throw new ApiFault("invalid_request", "Provide imagePath or imageBase64", 400);
   }
-  const supabase = createClient(
-    requireEnv("SUPABASE_URL"),
-    requireEnv("SUPABASE_SERVICE_ROLE_KEY"),
-  );
-  const { data, error } = await supabase.storage.from(bucket).download(req.imagePath);
+  const { data, error } = await serviceClient().storage.from(bucket).download(req.imagePath);
   if (error || !data) {
     throw new ApiFault(
       "invalid_request",
@@ -65,16 +59,37 @@ async function loadImageBase64(
   return encodeBase64(new Uint8Array(await data.arrayBuffer()));
 }
 
-/** 0..1: bazuje na zgodności sumy z paragonem i odsetku skategoryzowanych pozycji. */
+/** Kategorie + pamięć: z DB po userId, albo z override w request (tryb testowy). */
+async function resolveContext(
+  req: AnalyzeRequest,
+): Promise<{ categories: string[]; memory: CategoryExample[] }> {
+  if (req.categories) {
+    return { categories: req.categories, memory: req.examples ?? [] };
+  }
+  if (!req.userId) {
+    throw new ApiFault("invalid_request", "Provide userId (or a categories override)", 400);
+  }
+  const supabase = serviceClient();
+  try {
+    const categories = await fetchCategories(supabase, req.userId);
+    const memory = req.examples ?? await fetchMemory(supabase, req.userId);
+    return { categories, memory };
+  } catch (e) {
+    throw new ApiFault("internal", (e as Error).message, 500);
+  }
+}
+
+/** 0..1: zgodność sumy z paragonem + odsetek skategoryzowanych (nie-fallback) pozycji. */
 function computeConfidence(
   parsedTotalMinor: number | null,
   sumMinor: number,
   items: { suggestedCategory: string | null }[],
 ): number {
-  const categorized = items.length
-    ? items.filter((i) => i.suggestedCategory !== null).length / items.length
+  const specific = items.length
+    ? items.filter((i) => i.suggestedCategory && i.suggestedCategory !== FALLBACK_CATEGORY)
+        .length / items.length
     : 0;
-  let c = 0.5 + 0.4 * categorized; // 0.5..0.9
+  let c = 0.5 + 0.4 * specific; // 0.5..0.9
   const totalsMatch =
     parsedTotalMinor === null || Math.abs(parsedTotalMinor - sumMinor) <= 2;
   if (!totalsMatch) c -= 0.25;
@@ -82,15 +97,13 @@ function computeConfidence(
 }
 
 async function analyze(req: AnalyzeRequest): Promise<AnalyzeResponse> {
-  if (!Array.isArray(req.categories)) {
-    throw new ApiFault("invalid_request", "`categories` (string[]) is required", 400);
-  }
   const currency = req.currency ?? "PLN";
   const bucket = req.bucket ?? DEFAULT_BUCKET;
 
   const imageBase64 = await loadImageBase64(req, bucket);
+  const { categories, memory } = await resolveContext(req);
 
-  // Etap OCR
+  // OCR
   let ocrText: string;
   try {
     ocrText = await runOcr(imageBase64, requireEnv("GOOGLE_CLOUD_VISION_API_KEY"));
@@ -99,24 +112,52 @@ async function analyze(req: AnalyzeRequest): Promise<AnalyzeResponse> {
   }
 
   const client = new Anthropic({ apiKey: requireEnv("ANTHROPIC_API_KEY") });
+  const allowed = new Set(categories);
 
-  // Etap A + B
   let store: string;
   let date: string | null;
   let parsedTotal: number | null;
-  let amountsMinor: number[];
   let names: string[];
+  let amountsMinor: number[];
   let cats: (string | null)[];
   try {
+    // Etap A
     const extracted = await extractReceipt(client, EXTRACTION_MODEL, ocrText);
     store = extracted.store;
     date = extracted.date;
     parsedTotal = extracted.total;
     names = extracted.items.map((i) => i.name);
     amountsMinor = extracted.items.map((i) => Math.round(i.amount * 100));
-    cats = await categorizeItems(client, CATEGORIZATION_MODEL, names, req.categories);
+
+    // Etap B — exact-match z pamięci (pomija LLM dla znanych pozycji)
+    const exact = new Map<string, string>();
+    for (const m of memory) {
+      const k = norm(m.name);
+      if (!exact.has(k) && allowed.has(m.category)) exact.set(k, m.category);
+    }
+    cats = names.map((n) => exact.get(norm(n)) ?? null);
+
+    // LLM tylko dla nierozpoznanych
+    const pending = names.map((_, i) => i).filter((i) => cats[i] === null);
+    if (pending.length > 0) {
+      const llm = await categorizeItems(
+        client,
+        CATEGORIZATION_MODEL,
+        pending.map((i) => names[i]),
+        categories,
+        memory,
+      );
+      pending.forEach((origIdx, k) => (cats[origIdx] = llm[k] ?? null));
+    }
   } catch (e) {
     throw new ApiFault("analysis_failed", (e as Error).message, 502);
+  }
+
+  // Fallback: nieprzypisane -> "inne", jeśli ta kategoria istnieje u usera.
+  if (allowed.has(FALLBACK_CATEGORY)) {
+    for (let i = 0; i < cats.length; i++) {
+      if (cats[i] === null) cats[i] = FALLBACK_CATEGORY;
+    }
   }
 
   const items = names.map((name, i) => ({
@@ -127,8 +168,7 @@ async function analyze(req: AnalyzeRequest): Promise<AnalyzeResponse> {
 
   // Niezmiennik kontraktu: total == suma pozycji.
   const totalMinor = amountsMinor.reduce((a, b) => a + b, 0);
-  const parsedTotalMinor =
-    parsedTotal !== null ? Math.round(parsedTotal * 100) : null;
+  const parsedTotalMinor = parsedTotal !== null ? Math.round(parsedTotal * 100) : null;
 
   return {
     store,
