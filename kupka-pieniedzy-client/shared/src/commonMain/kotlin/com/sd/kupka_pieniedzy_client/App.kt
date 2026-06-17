@@ -13,6 +13,7 @@ import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.backhandler.BackHandler
 import com.sd.kupka_pieniedzy_client.core.config.AppConfig
@@ -43,6 +44,7 @@ private val FallbackConfig =
         userId = "00000000-0000-0000-0000-000000000001",
     )
 
+@OptIn(ExperimentalComposeUiApi::class)
 @Composable
 fun App() {
     val config by
@@ -71,8 +73,6 @@ fun App() {
             val exitApp = rememberAppExit()
             var showExitDialog by remember { mutableStateOf(false) }
 
-            // Systemowy „wstecz" (gest / przycisk): cofnij w stosie, w przeciwnym razie wróć na
-            // Dashboard, a na samym Dashboardzie poproś o potwierdzenie wyjścia z aplikacji.
             BackHandler(enabled = !showExitDialog) {
                 when {
                     navigator.canPop -> navigator.pop()
