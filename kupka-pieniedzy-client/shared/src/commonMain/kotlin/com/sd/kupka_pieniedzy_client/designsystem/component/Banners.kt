@@ -1,5 +1,6 @@
 package com.sd.kupka_pieniedzy_client.designsystem.component
 
+import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateFloat
@@ -14,11 +15,14 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -107,6 +111,116 @@ fun ReadyToast(
             AppText(subtitle, variant = TextVariant.Caption, color = colors.onSurfaceMedium)
         }
         AppText(actionText, variant = TextVariant.Label, color = colors.primaryHover)
+    }
+}
+
+/**
+ * Toast potwierdzenia akcji (sukces). Widoczny [durationMillis] (domyślnie 3 s), z kurczącym się
+ * paskiem postępu odliczającym czas. Tap = zamknij. Po upływie czasu wywołuje [onDismiss].
+ */
+@Composable
+fun SuccessToast(
+    title: String,
+    subtitle: String,
+    onDismiss: () -> Unit,
+    modifier: Modifier = Modifier,
+    durationMillis: Int = 3000,
+) {
+    val colors = KupkaTheme.colors
+    val progress = remember { Animatable(1f) }
+    LaunchedEffect(Unit) {
+        progress.animateTo(0f, animationSpec = tween(durationMillis, easing = LinearEasing))
+        onDismiss()
+    }
+    Column(
+        modifier =
+            modifier
+                .fillMaxWidth()
+                .clip(RoundedCornerShape(16.dp))
+                .background(colors.surfaceModal)
+                .border(1.dp, colors.budgetGreenFill.copy(alpha = 0.30f), RoundedCornerShape(16.dp))
+                .clickable(onClick = onDismiss)
+    ) {
+        Row(
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 15.dp, vertical = 13.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+        ) {
+            Box(
+                modifier =
+                    Modifier.size(40.dp)
+                        .clip(RoundedCornerShape(11.dp))
+                        .background(colors.budgetGreenFill.copy(alpha = 0.15f)),
+                contentAlignment = Alignment.Center,
+            ) {
+                MaterialSymbol(AppIcons.CheckCircle, size = 22.dp, tint = colors.budgetGreenFill)
+            }
+            Column(
+                modifier = Modifier.weight(1f),
+                verticalArrangement = Arrangement.spacedBy(1.dp),
+            ) {
+                AppText(title, variant = TextVariant.Label, color = colors.onSurfaceHigh)
+                AppText(subtitle, variant = TextVariant.Caption, color = colors.onSurfaceMedium)
+            }
+            MaterialSymbol(AppIcons.Close, size = 20.dp, tint = colors.onSurfaceLow)
+        }
+        Box(
+            modifier =
+                Modifier.fillMaxWidth()
+                    .height(3.dp)
+                    .background(colors.budgetGreenFill.copy(alpha = 0.16f))
+        ) {
+            Box(
+                modifier =
+                    Modifier.fillMaxWidth(progress.value).height(3.dp).background(colors.budgetGreenFill)
+            )
+        }
+    }
+}
+
+/**
+ * Toast błędu — zostaje na ekranie, dopóki użytkownik nie ponowi akcji. Akcja [actionText] (np.
+ * „Ponów”) wywołuje [onAction].
+ */
+@Composable
+fun ErrorToast(
+    title: String,
+    subtitle: String,
+    actionText: String,
+    onAction: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val colors = KupkaTheme.colors
+    Row(
+        modifier =
+            modifier
+                .fillMaxWidth()
+                .clip(RoundedCornerShape(16.dp))
+                .background(colors.surfaceModal)
+                .border(1.dp, colors.budgetRedFill.copy(alpha = 0.32f), RoundedCornerShape(16.dp))
+                .padding(horizontal = 15.dp, vertical = 13.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(12.dp),
+    ) {
+        Box(
+            modifier =
+                Modifier.size(40.dp)
+                    .clip(RoundedCornerShape(11.dp))
+                    .background(colors.budgetRedFill.copy(alpha = 0.15f)),
+            contentAlignment = Alignment.Center,
+        ) {
+            MaterialSymbol(AppIcons.Error, size = 22.dp, tint = colors.budgetRedFill)
+        }
+        Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(1.dp)) {
+            AppText(title, variant = TextVariant.Label, color = colors.onSurfaceHigh)
+            AppText(subtitle, variant = TextVariant.Caption, color = colors.onSurfaceMedium)
+        }
+        AppText(
+            actionText,
+            variant = TextVariant.Label,
+            color = colors.budgetRedFill,
+            modifier = Modifier.clickable(onClick = onAction),
+        )
     }
 }
 

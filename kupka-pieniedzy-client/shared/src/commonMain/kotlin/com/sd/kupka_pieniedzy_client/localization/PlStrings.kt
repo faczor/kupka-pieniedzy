@@ -129,6 +129,15 @@ object PlStrings : Strings {
     override val monthlyBudget = "Budżet miesięczny"
     override val perMonthSuffix = "zł / mies."
     override val createCategory = "Utwórz kategorię"
+    override val savingCategory = "Zapisywanie…"
+    override val categoryAddedTitle = "Kategoria dodana"
+
+    override fun categoryAddedSubtitle(name: String, budgetFormatted: String?): String =
+        if (budgetFormatted != null) "„$name” — budżet $budgetFormatted / mies." else "„$name”"
+
+    override val categoryAddErrorTitle = "Nie udało się dodać kategorii"
+    override val categoryAddErrorSubtitle = "Sprawdź połączenie i spróbuj ponownie"
+    override val retryShort = "Ponów"
 
     override fun monthName(month: Int): String =
         when (month) {

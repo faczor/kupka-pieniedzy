@@ -1,5 +1,11 @@
 package com.sd.kupka_pieniedzy_client.designsystem.component
 
+import androidx.compose.animation.core.LinearEasing
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -8,18 +14,24 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import com.sd.kupka_pieniedzy_client.designsystem.icon.AppIcons
 import com.sd.kupka_pieniedzy_client.designsystem.icon.MaterialSymbol
 import com.sd.kupka_pieniedzy_client.designsystem.theme.KupkaTheme
 
 private val ButtonHeight = 52.dp
 
-/** Główne CTA (teal). [enabled]=false → wygaszony, opcjonalna ikona wiodąca (np. lock). */
+/**
+ * Główne CTA (teal). [enabled]=false → wygaszony, opcjonalna ikona wiodąca (np. lock). Gdy
+ * [loading]=true, przycisk pokazuje kręcącą się ikonę + [loadingText] i jest nieklikalny.
+ */
 @Composable
 fun PrimaryButton(
     text: String,
@@ -27,8 +39,33 @@ fun PrimaryButton(
     modifier: Modifier = Modifier,
     enabled: Boolean = true,
     leadingIcon: String? = null,
+    loading: Boolean = false,
+    loadingText: String = text,
 ) {
     val colors = KupkaTheme.colors
+    if (loading) {
+        Row(
+            modifier =
+                modifier
+                    .fillMaxWidth()
+                    .height(ButtonHeight)
+                    .clip(KupkaTheme.shapes.buttonShape)
+                    .background(colors.primary.copy(alpha = 0.45f))
+                    .padding(horizontal = KupkaTheme.spacing.l),
+            horizontalArrangement = Arrangement.Center,
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            val fg = colors.onPrimary.copy(alpha = 0.75f)
+            SpinningSymbol(tint = fg)
+            AppText(
+                text = loadingText,
+                variant = TextVariant.Button,
+                color = fg,
+                modifier = Modifier.padding(start = KupkaTheme.spacing.s),
+            )
+        }
+        return
+    }
     val bg = if (enabled) colors.primary else colors.primary.copy(alpha = 0.25f)
     val fg = if (enabled) colors.onPrimary else colors.onSurfaceLow
     ButtonSurface(
@@ -38,6 +75,25 @@ fun PrimaryButton(
         leadingIcon = leadingIcon,
         onClick = onClick.takeIf { enabled },
         modifier = modifier,
+    )
+}
+
+/** Kręcąca się ikona ładowania (progress_activity). */
+@Composable
+private fun SpinningSymbol(tint: Color) {
+    val rotation = rememberInfiniteTransition()
+    val angle by
+        rotation.animateFloat(
+            initialValue = 0f,
+            targetValue = 360f,
+            animationSpec =
+                infiniteRepeatable(tween(1400, easing = LinearEasing), RepeatMode.Restart),
+        )
+    MaterialSymbol(
+        AppIcons.ProgressActivity,
+        size = 20.dp,
+        tint = tint,
+        modifier = Modifier.rotate(angle),
     )
 }
 

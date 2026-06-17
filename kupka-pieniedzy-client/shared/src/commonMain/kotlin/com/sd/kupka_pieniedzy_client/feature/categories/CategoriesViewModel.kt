@@ -32,6 +32,15 @@ data class NewCategoryForm(
         get() = !saving && name.isNotBlank()
 }
 
+/** Stan toastu potwierdzenia na ekranie Kategorie. */
+sealed interface CategoryToast {
+    /** Sukces — auto-dismiss po 3 s, tap = zamknij. */
+    data class Added(val name: String, val budget: Money?) : CategoryToast
+
+    /** Błąd — zostaje, dopóki użytkownik nie ponowi (sheet pozostaje otwarty). */
+    data object AddFailed : CategoryToast
+}
+
 class CategoriesViewModel(private val categoryService: CategoryService) : ViewModel() {
 
     private val _list = MutableStateFlow<ScreenState<List<Category>>>(ScreenState.Loading)
@@ -39,6 +48,9 @@ class CategoriesViewModel(private val categoryService: CategoryService) : ViewMo
 
     private val _form = MutableStateFlow(NewCategoryForm())
     val form: StateFlow<NewCategoryForm> = _form.asStateFlow()
+
+    private val _toast = MutableStateFlow<CategoryToast?>(null)
+    val toast: StateFlow<CategoryToast?> = _toast.asStateFlow()
 
     init {
         load()
@@ -59,6 +71,10 @@ class CategoriesViewModel(private val categoryService: CategoryService) : ViewMo
 
     fun resetForm() = _form.update { NewCategoryForm() }
 
+    fun dismissToast() {
+        _toast.value = null
+    }
+
     fun onNameChange(value: String) = _form.update { it.copy(name = value) }
 
     fun onIconSelect(icon: String) = _form.update { it.copy(icon = icon) }
@@ -73,6 +89,7 @@ class CategoriesViewModel(private val categoryService: CategoryService) : ViewMo
     fun create(onCreated: () -> Unit) {
         val current = _form.value
         if (!current.canCreate) return
+        val budget = current.budgetMajor?.takeIf { it > 0 }?.let { Money.ofMajor(it) }
         _form.update { it.copy(saving = true, error = null) }
         viewModelScope.launch {
             categoryService
@@ -81,8 +98,7 @@ class CategoriesViewModel(private val categoryService: CategoryService) : ViewMo
                         name = current.name,
                         icon = current.icon,
                         colorHex = current.colorHex,
-                        monthlyBudget =
-                            current.budgetMajor?.takeIf { it > 0 }?.let { Money.ofMajor(it) },
+                        monthlyBudget = budget,
                     )
                 )
                 .fold(
@@ -90,8 +106,12 @@ class CategoriesViewModel(private val categoryService: CategoryService) : ViewMo
                         _form.value = NewCategoryForm()
                         onCreated()
                         load()
+                        _toast.value = CategoryToast.Added(current.name, budget)
                     },
-                    onFailure = { e -> _form.update { it.copy(saving = false, error = e) } },
+                    onFailure = { e ->
+                        _form.update { it.copy(saving = false, error = e) }
+                        _toast.value = CategoryToast.AddFailed
+                    },
                 )
         }
     }
