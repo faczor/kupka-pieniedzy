@@ -117,8 +117,6 @@ interface Strings {
 
     val categoryAddErrorTitle: String
     val retryShort: String
-
-    // --- Toasty (globalne, per akcja zapisu) ---
     val toastErrorSubtitle: String
     val expenseSavedTitle: String
     val expenseSavedSubtitle: String

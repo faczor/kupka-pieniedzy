@@ -114,10 +114,6 @@ fun ReadyToast(
     }
 }
 
-/**
- * Toast potwierdzenia akcji (sukces). Widoczny [durationMillis] (domyślnie 3 s), z kurczącym się
- * paskiem postępu odliczającym czas. Tap = zamknij. Po upływie czasu wywołuje [onDismiss].
- */
 @Composable
 fun SuccessToast(
     title: String,
@@ -180,10 +176,6 @@ fun SuccessToast(
     }
 }
 
-/**
- * Toast błędu — zostaje na ekranie do tapnięcia ([onDismiss]) lub ponowienia. Gdy podano
- * [actionText] + [onAction], pokazuje akcję (np. „Ponów”).
- */
 @Composable
 fun ErrorToast(
     title: String,

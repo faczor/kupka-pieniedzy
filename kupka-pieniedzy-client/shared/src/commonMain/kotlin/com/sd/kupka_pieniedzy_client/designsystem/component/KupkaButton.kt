@@ -28,10 +28,7 @@ import com.sd.kupka_pieniedzy_client.designsystem.theme.KupkaTheme
 
 private val ButtonHeight = 52.dp
 
-/**
- * Główne CTA (teal). [enabled]=false → wygaszony, opcjonalna ikona wiodąca (np. lock). Gdy
- * [loading]=true, przycisk pokazuje kręcącą się ikonę + [loadingText] i jest nieklikalny.
- */
+/** Główne CTA (teal). [enabled]=false → wygaszony, opcjonalna ikona wiodąca (np. lock). */
 @Composable
 fun PrimaryButton(
     text: String,
@@ -78,7 +75,6 @@ fun PrimaryButton(
     )
 }
 
-/** Kręcąca się ikona ładowania (progress_activity). */
 @Composable
 private fun SpinningSymbol(tint: Color) {
     val rotation = rememberInfiniteTransition()

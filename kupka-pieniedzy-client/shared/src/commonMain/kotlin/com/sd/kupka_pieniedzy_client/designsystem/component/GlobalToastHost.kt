@@ -15,11 +15,6 @@ import com.sd.kupka_pieniedzy_client.localization.LocalStrings
 import com.sd.kupka_pieniedzy_client.localization.Strings
 import org.koin.compose.koinInject
 
-/**
- * Globalny host toastów — renderowany nad NavHostem, więc komunikaty przeżywają nawigację. Czyta
- * [ToastController] (singleton) i mapuje semantyczny [ToastMessage] na zlokalizowany tekst. Sukces:
- * dół ekranu, auto-znika. Błąd: góra ekranu, zostaje do tapnięcia / ponowienia.
- */
 @Composable
 fun GlobalToastHost(modifier: Modifier = Modifier) {
     val controller = koinInject<ToastController>()
