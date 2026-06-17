@@ -22,6 +22,21 @@ Funkcja czyta jedynie obraz ze Storage (service role).
 > jako darmowa/prywatna „fast path", z fallbackiem na Cloud Vision. Pipeline strukturyzacji
 > i kategoryzacji się nie zmienia (źródło tekstu jest wymienne).
 
+## Prompty
+
+Każdy prompt to **osobny plik** w `prompts/` w stylu XML (role / instructions / flow /
+json_schema / json-fields / **examples**), z placeholderami `{{...}}` podmienianymi przed
+wysyłką (`prompts.ts` → `render`).
+
+| Plik | Zmienne | Rola |
+|------|---------|------|
+| `prompts/extract-receipt.prompt.ts`   | `{{OCR_DATA}}`              | Etap A: tekst OCR → JSON paragonu |
+| `prompts/categorize-items.prompt.ts`  | `{{CATEGORIES}}`, `{{ITEMS}}` | Etap B: pozycje → kategorie |
+
+Treść w środku to czysty prompt; opakowanie `export default \`...\`` służy tylko temu, by
+plik na pewno trafił do bundla funkcji (statyczny `.xml` + `Deno.readTextFile` bywa gubiony
+w deployu). Few-shot przykłady żyją w plikach promptów — edytuje się je bez ruszania kodu.
+
 ## Kontrakt — Request
 
 `POST` z JSON. Podaj **`imagePath`** (obiekt w buckecie Storage) **albo** `imageBase64`.
