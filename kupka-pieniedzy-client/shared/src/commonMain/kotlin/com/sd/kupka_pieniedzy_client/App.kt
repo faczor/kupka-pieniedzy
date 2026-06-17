@@ -8,25 +8,33 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.backhandler.BackHandler
 import com.sd.kupka_pieniedzy_client.core.config.AppConfig
 import com.sd.kupka_pieniedzy_client.core.config.AppConfigLoader
+import com.sd.kupka_pieniedzy_client.core.platform.rememberAppExit
 import com.sd.kupka_pieniedzy_client.core.time.LocalToday
 import com.sd.kupka_pieniedzy_client.core.time.SystemDateProvider
 import com.sd.kupka_pieniedzy_client.data.di.dataModule
 import com.sd.kupka_pieniedzy_client.designsystem.component.GlobalToastHost
+import com.sd.kupka_pieniedzy_client.designsystem.component.KupkaConfirmDialog
 import com.sd.kupka_pieniedzy_client.designsystem.theme.KupkaDarkColors
 import com.sd.kupka_pieniedzy_client.designsystem.theme.KupkaTheme
 import com.sd.kupka_pieniedzy_client.di.appModule
 import com.sd.kupka_pieniedzy_client.di.domainModule
 import com.sd.kupka_pieniedzy_client.di.presentationModule
 import com.sd.kupka_pieniedzy_client.localization.AppLanguage
+import com.sd.kupka_pieniedzy_client.localization.LocalStrings
 import com.sd.kupka_pieniedzy_client.navigation.AppNavHost
 import com.sd.kupka_pieniedzy_client.navigation.LocalNavigator
 import com.sd.kupka_pieniedzy_client.navigation.Navigator
+import com.sd.kupka_pieniedzy_client.navigation.Route
 import org.koin.compose.KoinApplication
 
 private val FallbackConfig =
@@ -36,6 +44,7 @@ private val FallbackConfig =
         userId = "00000000-0000-0000-0000-000000000001",
     )
 
+@OptIn(ExperimentalComposeUiApi::class)
 @Composable
 fun App() {
     val config by
@@ -60,6 +69,18 @@ fun App() {
         KupkaTheme(language = AppLanguage.fromCode(current.language)) {
             val navigator = remember { Navigator() }
             val today = remember { SystemDateProvider().today() }
+            val strings = LocalStrings.current
+            val exitApp = rememberAppExit()
+            var showExitDialog by remember { mutableStateOf(false) }
+
+            BackHandler(enabled = !showExitDialog) {
+                when {
+                    navigator.canPop -> navigator.pop()
+                    navigator.current != Route.Dashboard -> navigator.selectTab(Route.Dashboard)
+                    else -> showExitDialog = true
+                }
+            }
+
             CompositionLocalProvider(LocalNavigator provides navigator, LocalToday provides today) {
                 Box(
                     modifier =
@@ -69,6 +90,18 @@ fun App() {
                 ) {
                     AppNavHost()
                     GlobalToastHost()
+                    KupkaConfirmDialog(
+                        visible = showExitDialog,
+                        title = strings.exitDialogTitle,
+                        message = strings.exitDialogMessage,
+                        confirmText = strings.exitDialogConfirm,
+                        dismissText = strings.cancel,
+                        onConfirm = {
+                            showExitDialog = false
+                            exitApp()
+                        },
+                        onDismiss = { showExitDialog = false },
+                    )
                 }
             }
         }

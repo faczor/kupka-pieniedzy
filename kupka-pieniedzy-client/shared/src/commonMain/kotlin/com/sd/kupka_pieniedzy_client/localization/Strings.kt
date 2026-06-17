@@ -29,6 +29,11 @@ interface Strings {
     val optional: String
     val comingSoon: String
 
+    // --- Wyjście z aplikacji ---
+    val exitDialogTitle: String
+    val exitDialogMessage: String
+    val exitDialogConfirm: String
+
     // --- Dashboard ---
     val balanceLabel: String
     val budgetsSection: String
