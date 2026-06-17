@@ -127,19 +127,9 @@ class ReceiptViewModel(
     }
 
     fun reanalyze() {
-        val id = receiptId ?: return
-        val path = _state.value.draft?.imagePath
-        _state.update { it.copy(loading = true) }
-        viewModelScope.launch {
-            receiptService
-                .runAnalysis(id, path)
-                .fold(
-                    onSuccess = { load(id) },
-                    onFailure = { e ->
-                        _state.update { it.copy(loading = false, actionError = e) }
-                        toast.show(ToastMessage.ReceiptReanalyzeFailed) { reanalyze() }
-                    },
-                )
-        }
+        // MVP (base64-only): oryginalne zdjęcie nie jest trwale przechowywane (nie idzie do
+        // Storage), więc ponowna analiza wymagałaby ponownego wyboru zdjęcia. Do czasu wdrożenia
+        // Storage albo flow „re-pick" sygnalizujemy brak możliwości zamiast wołać analizę bez obrazu.
+        toast.show(ToastMessage.ReceiptReanalyzeFailed)
     }
 }

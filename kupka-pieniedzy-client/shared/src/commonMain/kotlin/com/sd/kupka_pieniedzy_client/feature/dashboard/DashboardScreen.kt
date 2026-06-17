@@ -68,7 +68,7 @@ fun DashboardScreen() {
         rememberImagePicker { picked ->
             if (picked != null) {
                 addVm.startReceiptAnalysis(
-                    imagePath = picked.path,
+                    image = picked.bytes,
                     onStarted = {},
                     onCompleted = {},
                 )

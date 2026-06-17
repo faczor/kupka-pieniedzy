@@ -19,7 +19,7 @@ import com.sd.kupka_pieniedzy_client.domain.repository.TransactionRepository
 interface ReceiptService {
     suspend fun createPendingReceipt(imagePath: String?): Outcome<String>
 
-    suspend fun runAnalysis(receiptId: String, imagePath: String?): Outcome<Unit>
+    suspend fun runAnalysis(receiptId: String, image: ByteArray): Outcome<Unit>
 
     suspend fun acknowledgeReady(receiptId: String): Outcome<Unit>
 
@@ -47,9 +47,9 @@ class DefaultReceiptService(
             .createPending(store = null, imagePath = imagePath)
             .onSuccess { changeNotifier.notifyTransactionsChanged() }
 
-    override suspend fun runAnalysis(receiptId: String, imagePath: String?): Outcome<Unit> =
+    override suspend fun runAnalysis(receiptId: String, image: ByteArray): Outcome<Unit> =
         outcomeBinding {
-            val raw = analysisRepository.analyze(imagePath).bind()
+            val raw = analysisRepository.analyze(image).bind()
             val byName = categoryRepository.getAll().bind().associateBy { it.name.lowercase() }
 
             val items =
@@ -68,7 +68,7 @@ class DefaultReceiptService(
                     date = dateProvider.today(),
                     total = raw.total,
                     confidence = raw.confidence,
-                    imagePath = imagePath,
+                    imagePath = null, // MVP: zdjęcie idzie do funkcji jako base64, nie do Storage
                     items = items,
                 )
             receiptRepository.markReady(analyzed).bind()

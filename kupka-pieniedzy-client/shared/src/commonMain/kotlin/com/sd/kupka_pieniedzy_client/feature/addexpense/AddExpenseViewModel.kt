@@ -33,17 +33,17 @@ class AddExpenseViewModel(
      * pojawia się jako „w analizie” (Dashboard pokazuje pasek); [onCompleted] po zakończeniu
      * analizy (Dashboard pokazuje toast „gotowy”).
      */
-    fun startReceiptAnalysis(imagePath: String?, onStarted: () -> Unit, onCompleted: () -> Unit) {
+    fun startReceiptAnalysis(image: ByteArray, onStarted: () -> Unit, onCompleted: () -> Unit) {
         if (_starting.value) return
         _starting.value = true
         viewModelScope.launch {
             receiptService
-                .createPendingReceipt(imagePath)
+                .createPendingReceipt(imagePath = null)
                 .fold(
                     onSuccess = { id ->
                         _starting.value = false
                         onStarted()
-                        receiptService.runAnalysis(id, imagePath).onFailure {
+                        receiptService.runAnalysis(id, image).onFailure {
                             _error.value = it
                             toast.show(ToastMessage.ReceiptAnalysisFailed)
                         }
