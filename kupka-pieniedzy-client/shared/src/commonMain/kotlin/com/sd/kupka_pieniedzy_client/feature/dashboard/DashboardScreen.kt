@@ -14,6 +14,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -49,7 +50,10 @@ import com.sd.kupka_pieniedzy_client.localization.LocalStrings
 import com.sd.kupka_pieniedzy_client.navigation.AppBottomBar
 import com.sd.kupka_pieniedzy_client.navigation.LocalNavigator
 import com.sd.kupka_pieniedzy_client.navigation.Route
+import kotlinx.coroutines.delay
 import org.koin.compose.viewmodel.koinViewModel
+
+private const val READY_TOAST_AUTO_DISMISS_MS = 5_000L
 
 @Composable
 fun DashboardScreen() {
@@ -60,13 +64,11 @@ fun DashboardScreen() {
 
     var showModeSheet by remember { mutableStateOf(false) }
 
-    // Wybór zdjęcia paragonu z galerii telefonu → start (mockowej) analizy.
     val receiptPicker =
         rememberImagePicker { picked ->
             if (picked != null) {
                 addVm.startReceiptAnalysis(
                     imagePath = picked.path,
-                    // Odświeżanie Dashboardu napędza DataChangeNotifier (paragon „pending”/„ready”).
                     onStarted = {},
                     onCompleted = {},
                 )
@@ -90,20 +92,25 @@ fun DashboardScreen() {
                     onSeeAllEntries = { nav.selectTab(Route.Entries) },
                 )
             }
-            // Dolny pasek tylko po załadowaniu — podczas Loading/Error loading state zajmuje cały ekran.
             if (state is ScreenState.Content) {
                 AppBottomBar(selected = 0)
             }
         }
 
-        // Toast „paragon gotowy” (overlay u góry)
         (state as? ScreenState.Content)?.value?.readyReceipt?.let { ready ->
             val strings = LocalStrings.current
+            LaunchedEffect(ready.receiptId) {
+                delay(READY_TOAST_AUTO_DISMISS_MS)
+                dashboardVm.acknowledgeReadyReceipt(ready.receiptId)
+            }
             ReadyToast(
                 title = strings.receiptReadyTitle(ready.store),
                 subtitle = strings.receiptReadySubtitle(ready.itemCount, ready.confidencePercent),
                 actionText = strings.receiptReadyAction,
-                onClick = { nav.push(Route.Receipt(ready.receiptId)) },
+                onClick = {
+                    dashboardVm.acknowledgeReadyReceipt(ready.receiptId)
+                    nav.push(Route.Receipt(ready.receiptId))
+                },
                 modifier =
                     Modifier.align(Alignment.TopCenter).padding(horizontal = 14.dp, vertical = 8.dp),
             )
@@ -141,7 +148,6 @@ private fun DashboardContent(
                 .verticalScroll(rememberScrollState())
                 .padding(horizontal = KupkaTheme.spacing.screenH)
     ) {
-        // Header: miesiąc + awatar
         Row(
             modifier = Modifier.fillMaxWidth().padding(top = 8.dp, bottom = 18.dp),
             horizontalArrangement = Arrangement.SpaceBetween,
@@ -163,7 +169,6 @@ private fun DashboardContent(
             }
         }
 
-        // Hero „Zostało do wydania”
         AppText(
             strings.balanceLabel.uppercase(),
             variant = TextVariant.HeroLabel,
@@ -202,7 +207,6 @@ private fun DashboardContent(
             )
         }
 
-        // Budżety
         SectionHeader(
             strings.budgetsSection,
             actionText = strings.seeAll,
@@ -216,7 +220,6 @@ private fun DashboardContent(
             }
         }
 
-        // Ostatnie wpisy
         SectionHeader(
             strings.recentEntriesSection,
             actionText = strings.seeAll,

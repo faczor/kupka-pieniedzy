@@ -17,17 +17,14 @@ import com.sd.kupka_pieniedzy_client.domain.repository.ReceiptRepository
 import com.sd.kupka_pieniedzy_client.domain.repository.TransactionRepository
 
 interface ReceiptService {
-    /**
-     * Tworzy paragon „w analizie” (status pending). Zwraca id — Dashboard od razu pokazuje pasek.
-     */
     suspend fun createPendingReceipt(imagePath: String?): Outcome<String>
 
-    /** Część wolna (mock z opóźnieniem): analiza + zapis wyniku, status → ready. */
     suspend fun runAnalysis(receiptId: String, imagePath: String?): Outcome<Unit>
+
+    suspend fun acknowledgeReady(receiptId: String): Outcome<Unit>
 
     suspend fun getDraft(receiptId: String): Outcome<AnalyzedReceipt>
 
-    /** Zapis po review: agreguje pozycje do per-sub-suma splits + tworzy transakcję. */
     suspend fun saveReceipt(draft: AnalyzedReceipt): Outcome<Unit>
 
     suspend fun deleteReceipt(receiptId: String): Outcome<Unit>
@@ -77,6 +74,9 @@ class DefaultReceiptService(
             receiptRepository.markReady(analyzed).bind()
             changeNotifier.notifyTransactionsChanged()
         }
+
+    override suspend fun acknowledgeReady(receiptId: String): Outcome<Unit> =
+        receiptRepository.acknowledge(receiptId)
 
     override suspend fun getDraft(receiptId: String): Outcome<AnalyzedReceipt> =
         receiptRepository.getAnalyzed(receiptId)

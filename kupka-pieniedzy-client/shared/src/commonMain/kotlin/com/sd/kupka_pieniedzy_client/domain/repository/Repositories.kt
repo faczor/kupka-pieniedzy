@@ -13,12 +13,7 @@ import com.sd.kupka_pieniedzy_client.domain.model.RecentEntry
 import com.sd.kupka_pieniedzy_client.domain.model.Transaction
 import kotlinx.datetime.LocalDate
 
-/**
- * Kontrakty dostępu do danych. Implementacje (warstwa `data`, np. SupabaseXxxRepository) łapią
- * surowe wyjątki i zwracają [Outcome] z [com.sd.kupka_pieniedzy_client.core.error.DomainError].
- */
 interface AccountRepository {
-    /** Id domyślnego konta (MVP: jedno konto). */
     suspend fun getDefaultAccountId(): Outcome<String>
 }
 
@@ -45,7 +40,6 @@ interface TransactionRepository {
         currency: String,
     ): Outcome<Transaction>
 
-    /** Zapis transakcji-paragonu (kategoria L1 spożywka). Zwraca id transakcji. */
     suspend fun insertReceiptExpense(
         categoryId: String,
         accountId: String,
@@ -71,21 +65,21 @@ interface ReceiptRepository {
 
     suspend fun getReadyOne(): Outcome<Receipt?>
 
+    suspend fun acknowledge(receiptId: String): Outcome<Unit>
+
     suspend fun getAnalyzed(receiptId: String): Outcome<AnalyzedReceipt>
 
     suspend fun markReady(receipt: AnalyzedReceipt): Outcome<Unit>
 
     suspend fun delete(receiptId: String): Outcome<Unit>
 
-    /** Po akceptacji: dopina transakcję + zapisuje per-sub-suma splits, status = Saved. */
     suspend fun finalize(
         receiptId: String,
         transactionId: String,
-        splits: List<Pair<String, Money>>, // (categoryId, amount)
+        splits: List<Pair<String, Money>>,
     ): Outcome<Unit>
 }
 
-/** Jedyny zmockowany element — analiza pliku paragonu (docelowo Edge Function + Claude vision). */
 interface ReceiptAnalysisRepository {
     suspend fun analyze(imagePath: String?): Outcome<RawReceiptAnalysis>
 }
