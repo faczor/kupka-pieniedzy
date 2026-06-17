@@ -24,6 +24,10 @@ object PlStrings : Strings {
     override val optional = "opcjonalnie"
     override val comingSoon = "Wkrótce"
 
+    override val exitDialogTitle = "Opuścić aplikację?"
+    override val exitDialogMessage = "Czy na pewno chcesz zamknąć Kupkę pieniędzy?"
+    override val exitDialogConfirm = "Wyjdź"
+
     override val balanceLabel = "Zostało do wydania"
     override val budgetsSection = "Budżety"
     override val recentEntriesSection = "Ostatnie wpisy"
