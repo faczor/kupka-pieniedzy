@@ -69,7 +69,6 @@ class SupabaseReceiptRepository(
                     filter {
                         eq("user_id", config.userId)
                         eq("status", "ready")
-                        // Toast jednorazowy: po kliknięciu paragon jest odhaczany i znika z notyfikacji.
                         eq("acknowledged", false)
                     }
                     order("created_at", Order.DESCENDING)
@@ -147,7 +146,6 @@ class SupabaseReceiptRepository(
         splits: List<Pair<String, Money>>,
     ): Outcome<Unit> =
         runCatchingDomain(supabase.isConfigured) {
-            // 1) dopnij transakcję + status saved
             supabase.postgrest.from("receipts").update(
                 ReceiptFinalizePatch(transactionId = transactionId, status = "saved")
             ) {
@@ -156,7 +154,6 @@ class SupabaseReceiptRepository(
                     eq("id", receiptId)
                 }
             }
-            // 2) wstaw per-sub-suma splits (czyść wcześniejsze, by zapis był idempotentny)
             supabase.postgrest.from("receipt_category_splits").delete {
                 filter { eq("receipt_id", receiptId) }
             }
@@ -175,7 +172,6 @@ class SupabaseReceiptRepository(
         }
 }
 
-/** Patch przy [markReady]. */
 @kotlinx.serialization.Serializable
 private data class ReceiptReadyPatch(
     @kotlinx.serialization.SerialName("store") val store: String,
@@ -186,13 +182,11 @@ private data class ReceiptReadyPatch(
     @kotlinx.serialization.SerialName("raw_ocr_json") val rawOcrJson: JsonObject,
 )
 
-/** Patch przy [SupabaseReceiptRepository.acknowledge] — odhaczenie toasta „gotowy”. */
 @kotlinx.serialization.Serializable
 private data class ReceiptAcknowledgePatch(
     @kotlinx.serialization.SerialName("acknowledged") val acknowledged: Boolean,
 )
 
-/** Patch przy [finalize]. */
 @kotlinx.serialization.Serializable
 private data class ReceiptFinalizePatch(
     @kotlinx.serialization.SerialName("transaction_id") val transactionId: String,

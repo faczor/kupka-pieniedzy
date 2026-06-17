@@ -60,13 +60,11 @@ fun DashboardScreen() {
 
     var showModeSheet by remember { mutableStateOf(false) }
 
-    // Wybór zdjęcia paragonu z galerii telefonu → start (mockowej) analizy.
     val receiptPicker =
         rememberImagePicker { picked ->
             if (picked != null) {
                 addVm.startReceiptAnalysis(
                     imagePath = picked.path,
-                    // Odświeżanie Dashboardu napędza DataChangeNotifier (paragon „pending”/„ready”).
                     onStarted = {},
                     onCompleted = {},
                 )
@@ -90,13 +88,11 @@ fun DashboardScreen() {
                     onSeeAllEntries = { nav.selectTab(Route.Entries) },
                 )
             }
-            // Dolny pasek tylko po załadowaniu — podczas Loading/Error loading state zajmuje cały ekran.
             if (state is ScreenState.Content) {
                 AppBottomBar(selected = 0)
             }
         }
 
-        // Toast „paragon gotowy” (overlay u góry)
         (state as? ScreenState.Content)?.value?.readyReceipt?.let { ready ->
             val strings = LocalStrings.current
             ReadyToast(
@@ -104,7 +100,6 @@ fun DashboardScreen() {
                 subtitle = strings.receiptReadySubtitle(ready.itemCount, ready.confidencePercent),
                 actionText = strings.receiptReadyAction,
                 onClick = {
-                    // Notyfikacja jednorazowa: odhacz i otwórz paragon — po powrocie toast już nie wróci.
                     dashboardVm.acknowledgeReadyReceipt(ready.receiptId)
                     nav.push(Route.Receipt(ready.receiptId))
                 },
@@ -145,7 +140,6 @@ private fun DashboardContent(
                 .verticalScroll(rememberScrollState())
                 .padding(horizontal = KupkaTheme.spacing.screenH)
     ) {
-        // Header: miesiąc + awatar
         Row(
             modifier = Modifier.fillMaxWidth().padding(top = 8.dp, bottom = 18.dp),
             horizontalArrangement = Arrangement.SpaceBetween,
@@ -167,7 +161,6 @@ private fun DashboardContent(
             }
         }
 
-        // Hero „Zostało do wydania”
         AppText(
             strings.balanceLabel.uppercase(),
             variant = TextVariant.HeroLabel,
@@ -206,7 +199,6 @@ private fun DashboardContent(
             )
         }
 
-        // Budżety
         SectionHeader(
             strings.budgetsSection,
             actionText = strings.seeAll,
@@ -220,7 +212,6 @@ private fun DashboardContent(
             }
         }
 
-        // Ostatnie wpisy
         SectionHeader(
             strings.recentEntriesSection,
             actionText = strings.seeAll,

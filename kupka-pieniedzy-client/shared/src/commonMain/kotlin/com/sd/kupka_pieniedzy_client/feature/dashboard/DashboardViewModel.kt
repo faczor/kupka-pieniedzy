@@ -24,19 +24,13 @@ class DashboardViewModel(
 
     init {
         load()
-        // Reaktywne odświeżanie: każdy zapis (manual / paragon / usunięcie) sygnalizuje zmianę.
         viewModelScope.launch {
             changeNotifier.transactionsChanged.collect { reload(showLoading = false) }
         }
     }
 
-    /** Pierwsze ładowanie i retry — pokazuje stan Loading. */
     fun load() = reload(showLoading = true)
 
-    /**
-     * Toast „gotowy” jest jednorazowy na kliknięcie: chowamy go natychmiast (optymistycznie, by nie
-     * wrócił po powrocie z ekranu paragonu) i trwale odhaczamy w bazie.
-     */
     fun acknowledgeReadyReceipt(receiptId: String) {
         val current = _state.value
         if (current is ScreenState.Content) {
