@@ -5,6 +5,8 @@ import androidx.lifecycle.viewModelScope
 import com.sd.kupka_pieniedzy_client.core.error.DomainError
 import com.sd.kupka_pieniedzy_client.core.money.Money
 import com.sd.kupka_pieniedzy_client.core.presentation.ScreenState
+import com.sd.kupka_pieniedzy_client.core.presentation.ToastController
+import com.sd.kupka_pieniedzy_client.core.presentation.ToastMessage
 import com.sd.kupka_pieniedzy_client.core.result.fold
 import com.sd.kupka_pieniedzy_client.designsystem.icon.DefaultCategoryIcon
 import com.sd.kupka_pieniedzy_client.designsystem.theme.CategoryColorPalette
@@ -32,7 +34,10 @@ data class NewCategoryForm(
         get() = !saving && name.isNotBlank()
 }
 
-class CategoriesViewModel(private val categoryService: CategoryService) : ViewModel() {
+class CategoriesViewModel(
+    private val categoryService: CategoryService,
+    private val toast: ToastController,
+) : ViewModel() {
 
     private val _list = MutableStateFlow<ScreenState<List<Category>>>(ScreenState.Loading)
     val list: StateFlow<ScreenState<List<Category>>> = _list.asStateFlow()
@@ -73,6 +78,7 @@ class CategoriesViewModel(private val categoryService: CategoryService) : ViewMo
     fun create(onCreated: () -> Unit) {
         val current = _form.value
         if (!current.canCreate) return
+        val budget = current.budgetMajor?.takeIf { it > 0 }?.let { Money.ofMajor(it) }
         _form.update { it.copy(saving = true, error = null) }
         viewModelScope.launch {
             categoryService
@@ -81,8 +87,7 @@ class CategoriesViewModel(private val categoryService: CategoryService) : ViewMo
                         name = current.name,
                         icon = current.icon,
                         colorHex = current.colorHex,
-                        monthlyBudget =
-                            current.budgetMajor?.takeIf { it > 0 }?.let { Money.ofMajor(it) },
+                        monthlyBudget = budget,
                     )
                 )
                 .fold(
@@ -90,8 +95,12 @@ class CategoriesViewModel(private val categoryService: CategoryService) : ViewMo
                         _form.value = NewCategoryForm()
                         onCreated()
                         load()
+                        toast.show(ToastMessage.CategoryAdded(current.name, budget))
                     },
-                    onFailure = { e -> _form.update { it.copy(saving = false, error = e) } },
+                    onFailure = { e ->
+                        _form.update { it.copy(saving = false, error = e) }
+                        toast.show(ToastMessage.CategoryAddFailed) { create(onCreated) }
+                    },
                 )
         }
     }

@@ -1,6 +1,7 @@
 package com.sd.kupka_pieniedzy_client.di
 
 import com.sd.kupka_pieniedzy_client.core.config.AppConfig
+import com.sd.kupka_pieniedzy_client.core.presentation.ToastController
 import com.sd.kupka_pieniedzy_client.core.time.DateProvider
 import com.sd.kupka_pieniedzy_client.core.time.SystemDateProvider
 import com.sd.kupka_pieniedzy_client.domain.event.DataChangeNotifier
@@ -27,6 +28,7 @@ fun appModule(config: AppConfig): Module = module {
     single { config }
     single<DateProvider> { SystemDateProvider() }
     single<DataChangeNotifier> { DefaultDataChangeNotifier() }
+    single { ToastController() }
 }
 
 /** Warstwa domenowa — Service'y komponują Repository (z `dataModule`). */

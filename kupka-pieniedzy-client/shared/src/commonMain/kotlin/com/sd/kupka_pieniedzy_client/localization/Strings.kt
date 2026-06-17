@@ -110,6 +110,24 @@ interface Strings {
     val monthlyBudget: String
     val perMonthSuffix: String
     val createCategory: String
+    val savingCategory: String
+    val categoryAddedTitle: String
+
+    fun categoryAddedSubtitle(name: String, budgetFormatted: String?): String
+
+    val categoryAddErrorTitle: String
+    val retryShort: String
+    val toastErrorSubtitle: String
+    val expenseSavedTitle: String
+    val expenseSavedSubtitle: String
+    val expenseSaveErrorTitle: String
+    val receiptSavedTitle: String
+    val receiptSavedSubtitle: String
+    val receiptSaveErrorTitle: String
+    val receiptDeletedTitle: String
+    val receiptDeleteErrorTitle: String
+    val receiptReanalyzeErrorTitle: String
+    val receiptAnalysisErrorTitle: String
 
     // --- Miesiące (mianownik, np. "Czerwiec") ---
     fun monthName(month: Int): String

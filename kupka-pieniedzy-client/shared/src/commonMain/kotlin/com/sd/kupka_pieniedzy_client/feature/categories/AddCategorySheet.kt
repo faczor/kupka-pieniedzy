@@ -127,6 +127,8 @@ fun ColumnScope.AddCategorySheetContent(
         text = strings.createCategory,
         onClick = { viewModel.create(onCreated = onCreated) },
         enabled = form.canCreate,
+        loading = form.saving,
+        loadingText = strings.savingCategory,
     )
     Spacer(Modifier.height(8.dp))
 }

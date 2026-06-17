@@ -129,6 +129,26 @@ object PlStrings : Strings {
     override val monthlyBudget = "Budżet miesięczny"
     override val perMonthSuffix = "zł / mies."
     override val createCategory = "Utwórz kategorię"
+    override val savingCategory = "Zapisywanie…"
+    override val categoryAddedTitle = "Kategoria dodana"
+
+    override fun categoryAddedSubtitle(name: String, budgetFormatted: String?): String =
+        if (budgetFormatted != null) "„$name” — budżet $budgetFormatted / mies." else "„$name”"
+
+    override val categoryAddErrorTitle = "Nie udało się dodać kategorii"
+    override val retryShort = "Ponów"
+
+    override val toastErrorSubtitle = "Sprawdź połączenie i spróbuj ponownie"
+    override val expenseSavedTitle = "Wydatek zapisany"
+    override val expenseSavedSubtitle = "Dodano do Twoich wpisów"
+    override val expenseSaveErrorTitle = "Nie udało się zapisać wydatku"
+    override val receiptSavedTitle = "Paragon zapisany"
+    override val receiptSavedSubtitle = "Pozycje trafiły do wydatków"
+    override val receiptSaveErrorTitle = "Nie udało się zapisać paragonu"
+    override val receiptDeletedTitle = "Paragon usunięty"
+    override val receiptDeleteErrorTitle = "Nie udało się usunąć paragonu"
+    override val receiptReanalyzeErrorTitle = "Nie udało się przeanalizować ponownie"
+    override val receiptAnalysisErrorTitle = "Nie udało się przeanalizować paragonu"
 
     override fun monthName(month: Int): String =
         when (month) {
