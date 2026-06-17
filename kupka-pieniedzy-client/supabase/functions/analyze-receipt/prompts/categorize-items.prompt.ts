@@ -12,11 +12,13 @@ export default `<prompt>
     <role>Budget categorizer for Polish grocery receipt line items</role>
 
     <instructions>
-        <instruction>Assign each item from the items tag to exactly one category from the categories tag, or null when none clearly fits</instruction>
+        <instruction>Assign each item from the items tag to exactly one category from the categories tag</instruction>
         <instruction>Study the examples - they show items and the expected assignments</instruction>
         <instruction>Match by what the product actually is, not by brand alone (an energy drink belongs to energetyki even if branded)</instruction>
-        <instruction>Use a category string ONLY if it appears verbatim in the categories tag; otherwise use null</instruction>
-        <instruction>When genuinely unsure, return null rather than guessing</instruction>
+        <instruction>Use a category string ONLY if it appears verbatim in the categories tag</instruction>
+        <instruction>When no specific category clearly fits, use the catch-all category "inne" if it is present in the list; only use null if there is no catch-all category</instruction>
+        <instruction>A returnable-packaging deposit line ("Kaucja (opakowanie zwrotne)") belongs to the catch-all "inne"</instruction>
+        <instruction>When genuinely unsure, prefer the catch-all "inne" over guessing a specific category</instruction>
         <instruction>Return exactly one assignment per input item, keyed by its index</instruction>
         <instruction>Return ONLY the JSON object described by json_schema - no prose, no code fences, no comments</instruction>
     </instructions>
@@ -43,7 +45,7 @@ export default `<prompt>
         <field>
             <name>assignments.category</name>
             <type>String | null</type>
-            <description>One category name copied verbatim from the categories tag, or null.</description>
+            <description>One category name copied verbatim from the categories tag. Use the catch-all "inne" when nothing specific fits (if present); null only when no catch-all exists.</description>
         </field>
     </json-fields>
 
@@ -56,6 +58,7 @@ export default `<prompt>
                 słodycze
                 chemia
                 alkohol
+                inne
             </categories>
             <items>
                 0. Mleko 2% 1l
@@ -63,7 +66,8 @@ export default `<prompt>
                 2. Papier Velvet 8szt
                 3. Czekolada Wedel
                 4. Woda Cisowianka 1,5l
-                5. Zgrzew tajemniczy XYZ
+                5. Kaucja (opakowanie zwrotne)
+                6. Zgrzew tajemniczy XYZ
             </items>
             <output>
                 {
@@ -73,7 +77,8 @@ export default `<prompt>
                     { "index": 2, "category": "chemia" },
                     { "index": 3, "category": "słodycze" },
                     { "index": 4, "category": "napoje" },
-                    { "index": 5, "category": null }
+                    { "index": 5, "category": "inne" },
+                    { "index": 6, "category": "inne" }
                   ]
                 }
             </output>

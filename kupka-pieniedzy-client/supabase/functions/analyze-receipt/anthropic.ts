@@ -11,6 +11,10 @@ const JSON_ONLY_SYSTEM =
   "You are a precise extraction engine. Respond with a single JSON object only — " +
   "no prose, no markdown, no code fences.";
 
+// Catch-all kategoria. Gdy istnieje na liście usera, nieprzypisane pozycje lądują tutaj
+// zamiast jako null (zgodnie z seedem: kategoria L1 "inne"). Ewentualnie do env w przyszłości.
+const FALLBACK_CATEGORY = "inne";
+
 // Strukturalny typ zamiast Anthropic.Message — niezależny od wersji SDK.
 type ContentBlockLike = { type: string; text?: string };
 type MessageLike = { content: ContentBlockLike[] };
@@ -88,6 +92,13 @@ export async function categorizeItems(
     const cat = o.category;
     if (!Number.isInteger(idx) || idx < 0 || idx >= itemNames.length) continue;
     result[idx] = typeof cat === "string" && allowed.has(cat) ? cat : null;
+  }
+
+  // Zabezpieczenie: nieprzypisane -> "inne", jeśli ta kategoria jest dostępna.
+  if (allowed.has(FALLBACK_CATEGORY)) {
+    for (let i = 0; i < result.length; i++) {
+      if (result[i] === null) result[i] = FALLBACK_CATEGORY;
+    }
   }
   return result;
 }
