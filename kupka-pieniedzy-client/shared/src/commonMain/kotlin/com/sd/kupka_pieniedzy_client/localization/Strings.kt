@@ -116,6 +116,46 @@ interface Strings {
     fun categoryAddedSubtitle(name: String, budgetFormatted: String?): String
 
     val categoryAddErrorTitle: String
+
+    // --- Zarządzanie kategoriami (edycja / usuwanie) ---
+    val swipeEdit: String
+    val swipeDelete: String
+    val defaultCannotDelete: String
+    val editCategory: String
+    val saveChanges: String
+    val deleteCategory: String
+    val categoryUpdatedTitle: String
+
+    fun categoryUpdatedSubtitle(name: String): String
+
+    val categoryUpdateErrorTitle: String
+    val categoryDeleteErrorTitle: String
+    val deleteCategoryTitle: String
+
+    fun entriesThisMonth(count: Int): String
+
+    val budgetPerMonthCaption: String
+    val noEntriesNoBudget: String
+    val emptyCategorySafeHint: String
+
+    fun whatToDoWithEntries(count: Int): String
+
+    val moveEntriesTitle: String
+    val moveEntriesSubtitle: String
+    val leaveEntriesTitle: String
+
+    fun leaveEntriesSubtitle(name: String): String
+
+    val changeTarget: String
+    val moveToTitle: String
+
+    fun moveToSubtitle(count: Int, name: String): String
+
+    fun moveToCta(name: String): String
+
+    fun categoryDeletedTitle(name: String): String
+
+    fun categoryDeletedMovedSubtitle(count: Int, name: String): String
     val retryShort: String
     val toastErrorSubtitle: String
     val expenseSavedTitle: String

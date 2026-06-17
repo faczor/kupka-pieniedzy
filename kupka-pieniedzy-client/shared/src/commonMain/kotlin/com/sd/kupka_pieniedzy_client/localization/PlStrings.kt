@@ -136,6 +136,60 @@ object PlStrings : Strings {
         if (budgetFormatted != null) "„$name” — budżet $budgetFormatted / mies." else "„$name”"
 
     override val categoryAddErrorTitle = "Nie udało się dodać kategorii"
+
+    override val swipeEdit = "Edytuj"
+    override val swipeDelete = "Usuń"
+    override val defaultCannotDelete = "Nie można usunąć"
+    override val editCategory = "Edytuj kategorię"
+    override val saveChanges = "Zapisz zmiany"
+    override val deleteCategory = "Usuń kategorię"
+    override val categoryUpdatedTitle = "Zmiany zapisane"
+
+    override fun categoryUpdatedSubtitle(name: String) = "„$name”"
+
+    override val categoryUpdateErrorTitle = "Nie udało się zapisać zmian"
+    override val categoryDeleteErrorTitle = "Nie udało się usunąć kategorii"
+    override val deleteCategoryTitle = "Usuń kategorię"
+
+    override fun entriesThisMonth(count: Int): String {
+        val word = plChoosePlural(count, "wpis", "wpisy", "wpisów")
+        return "$count $word"
+    }
+
+    override val budgetPerMonthCaption = "budżet / mies."
+    override val noEntriesNoBudget = "Brak wpisów · bez budżetu"
+    override val emptyCategorySafeHint =
+        "Pusta kategoria — nic nie przepadnie. Możesz ją usunąć od razu."
+
+    override fun whatToDoWithEntries(count: Int): String {
+        val word = plChoosePlural(count, "WPISEM", "WPISAMI", "WPISAMI")
+        return "CO ZROBIĆ Z $count $word?"
+    }
+
+    override val moveEntriesTitle = "Przenieś wpisy do innej kategorii"
+    override val moveEntriesSubtitle = "Historia zostaje — zmienia się tylko etykieta"
+    override val leaveEntriesTitle = "Zostaw bez zmian"
+
+    override fun leaveEntriesSubtitle(name: String) =
+        "Wpisy zostają przy „$name”. Kategoria znika tylko z nowych wydatków."
+
+    override val changeTarget = "Zmień"
+    override val moveToTitle = "Przenieś do…"
+
+    override fun moveToSubtitle(count: Int, name: String): String {
+        val word = plChoosePlural(count, "wpis", "wpisy", "wpisów")
+        return "$count $word z „$name” zmieni kategorię na wybraną."
+    }
+
+    override fun moveToCta(name: String) = "Przenieś do „$name”"
+
+    override fun categoryDeletedTitle(name: String) = "Usunięto „$name”"
+
+    override fun categoryDeletedMovedSubtitle(count: Int, name: String): String {
+        val word = plChoosePlural(count, "wpis", "wpisy", "wpisów")
+        return "$count $word → „$name”"
+    }
+
     override val retryShort = "Ponów"
 
     override val toastErrorSubtitle = "Sprawdź połączenie i spróbuj ponownie"

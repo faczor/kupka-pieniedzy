@@ -12,8 +12,10 @@ import com.sd.kupka_pieniedzy_client.data.supabase.SupabaseClientProvider
 import com.sd.kupka_pieniedzy_client.data.supabase.notFound
 import com.sd.kupka_pieniedzy_client.data.supabase.runCatchingDomain
 import com.sd.kupka_pieniedzy_client.domain.model.Category
+import com.sd.kupka_pieniedzy_client.domain.model.EditCategory
 import com.sd.kupka_pieniedzy_client.domain.model.NewCategory
 import com.sd.kupka_pieniedzy_client.domain.repository.CategoryRepository
+import io.github.jan.supabase.postgrest.query.Columns
 import io.github.jan.supabase.postgrest.query.Order
 
 private const val GROCERIES_L1_NAME = "spożywka"
@@ -120,11 +122,135 @@ class SupabaseCategoryRepository(
             created.toDomain(config.defaultCurrency, budgetMinor = input.monthlyBudget?.minorUnits)
         }
 
+    override suspend fun update(id: String, input: EditCategory): Outcome<Category> =
+        runCatchingDomain(supabase.isConfigured) {
+            supabase.postgrest
+                .from("categories")
+                .update(
+                    CategoryPatch(name = input.name, icon = input.icon, color = input.colorHex)
+                ) {
+                    filter {
+                        eq("user_id", config.userId)
+                        eq("id", id)
+                    }
+                }
+
+            // Budżet bieżącego miesiąca: nadpisujemy (usuń stary z okresu, wstaw nowy jeśli podany).
+            val (start, end) =
+                com.sd.kupka_pieniedzy_client.core.time.monthRange(dateProvider.today())
+            deleteCurrentBudgets(id, start.toString(), end.toString())
+            input.monthlyBudget?.let { budget ->
+                supabase.postgrest
+                    .from("budgets")
+                    .insert(
+                        BudgetInsertRow(
+                            userId = config.userId,
+                            categoryId = id,
+                            amount = budget.toZl(),
+                            periodStart = start.toString(),
+                            periodEnd = end.toString(),
+                        )
+                    )
+            }
+
+            // Odczyt świeżego wiersza (wzorzec jak w getById) — kontrakt zwraca pełną kategorię.
+            val dto =
+                supabase.postgrest
+                    .from("categories")
+                    .select {
+                        filter {
+                            eq("user_id", config.userId)
+                            eq("id", id)
+                        }
+                        limit(1)
+                    }
+                    .decodeSingleOrNull<CategoryDto>() ?: notFound()
+            dto.toDomain(config.defaultCurrency, budgetMinor = input.monthlyBudget?.minorUnits)
+        }
+
+    override suspend fun countEntries(categoryId: String): Outcome<Int> =
+        runCatchingDomain(supabase.isConfigured) {
+            val tx =
+                supabase.postgrest
+                    .from("transactions")
+                    .select(Columns.list("id")) {
+                        filter {
+                            eq("user_id", config.userId)
+                            eq("category_id", categoryId)
+                        }
+                    }
+                    .decodeList<IdRow>()
+            val splits =
+                supabase.postgrest
+                    .from("receipt_category_splits")
+                    .select(Columns.list("id")) {
+                        filter { eq("category_id", categoryId) }
+                    }
+                    .decodeList<IdRow>()
+            tx.size + splits.size
+        }
+
+    override suspend fun deactivate(categoryId: String, moveEntriesToId: String?): Outcome<Unit> =
+        runCatchingDomain(supabase.isConfigured) {
+            // Opcja „Przenieś wpisy" → przepnij transakcje i splity na nową kategorię.
+            if (moveEntriesToId != null) {
+                supabase.postgrest
+                    .from("transactions")
+                    .update(CategoryRefPatch(categoryId = moveEntriesToId)) {
+                        filter {
+                            eq("user_id", config.userId)
+                            eq("category_id", categoryId)
+                        }
+                    }
+                supabase.postgrest
+                    .from("receipt_category_splits")
+                    .update(CategoryRefPatch(categoryId = moveEntriesToId)) {
+                        filter { eq("category_id", categoryId) }
+                    }
+            }
+            // Budżet kategorii znika razem z nią.
+            supabase.postgrest
+                .from("budgets")
+                .delete {
+                    filter {
+                        eq("user_id", config.userId)
+                        eq("category_id", categoryId)
+                    }
+                }
+            // Miękkie usunięcie — kategoria zostaje w bazie (historia), znika z listy/pickerów.
+            supabase.postgrest
+                .from("categories")
+                .update(CategoryActivePatch(active = false)) {
+                    filter {
+                        eq("user_id", config.userId)
+                        eq("id", categoryId)
+                    }
+                }
+            Unit
+        }
+
+    private suspend fun deleteCurrentBudgets(categoryId: String, start: String, end: String) {
+        supabase.postgrest
+            .from("budgets")
+            .delete {
+                filter {
+                    eq("user_id", config.userId)
+                    eq("category_id", categoryId)
+                    lte("period_start", end)
+                    gte("period_end", start)
+                }
+            }
+    }
+
     private suspend fun fetchCategories(): List<CategoryDto> =
         supabase.postgrest
             .from("categories")
             .select {
-                filter { eq("user_id", config.userId) }
+                // Soft-delete (0004): dezaktywowane kategorie znikają z listy i pickerów.
+                filter {
+                    eq("user_id", config.userId)
+                    eq("active", true)
+                }
                 order("level", Order.ASCENDING)
                 order("name", Order.ASCENDING)
             }
@@ -157,3 +283,27 @@ private data class BudgetInsertRow(
     @kotlinx.serialization.SerialName("period_start") val periodStart: String,
     @kotlinx.serialization.SerialName("period_end") val periodEnd: String,
 )
+
+/** Patch edycji kategorii (nazwa + prezentacja). */
+@kotlinx.serialization.Serializable
+private data class CategoryPatch(
+    @kotlinx.serialization.SerialName("name") val name: String,
+    @kotlinx.serialization.SerialName("icon") val icon: String,
+    @kotlinx.serialization.SerialName("color") val color: String,
+)
+
+/** Patch dezaktywacji (soft-delete). */
+@kotlinx.serialization.Serializable
+private data class CategoryActivePatch(
+    @kotlinx.serialization.SerialName("active") val active: Boolean,
+)
+
+/** Patch przepięcia wpisu na inną kategorię (transactions / receipt_category_splits). */
+@kotlinx.serialization.Serializable
+private data class CategoryRefPatch(
+    @kotlinx.serialization.SerialName("category_id") val categoryId: String,
+)
+
+/** Lekki wiersz tylko z `id` — do liczenia wpisów. */
+@kotlinx.serialization.Serializable
+private data class IdRow(@kotlinx.serialization.SerialName("id") val id: String)

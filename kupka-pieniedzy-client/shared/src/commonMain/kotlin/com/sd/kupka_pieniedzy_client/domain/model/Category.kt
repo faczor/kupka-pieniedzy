@@ -32,3 +32,11 @@ data class NewCategory(
     val colorHex: String,
     val monthlyBudget: Money?,
 )
+
+/** Dane edycji istniejącej kategorii (sheet „Edytuj kategorię”). */
+data class EditCategory(
+    val name: String,
+    val icon: String,
+    val colorHex: String,
+    val monthlyBudget: Money?,
+)

@@ -5,6 +5,7 @@ import com.sd.kupka_pieniedzy_client.core.result.Outcome
 import com.sd.kupka_pieniedzy_client.domain.model.AnalyzedReceipt
 import com.sd.kupka_pieniedzy_client.domain.model.BudgetProgress
 import com.sd.kupka_pieniedzy_client.domain.model.Category
+import com.sd.kupka_pieniedzy_client.domain.model.EditCategory
 import com.sd.kupka_pieniedzy_client.domain.model.NewCategory
 import com.sd.kupka_pieniedzy_client.domain.model.NewManualExpense
 import com.sd.kupka_pieniedzy_client.domain.model.RawReceiptAnalysis
@@ -27,6 +28,18 @@ interface CategoryRepository {
     suspend fun getGroceriesSubcategories(): Outcome<List<Category>>
 
     suspend fun create(input: NewCategory): Outcome<Category>
+
+    suspend fun update(id: String, input: EditCategory): Outcome<Category>
+
+    /** Liczba wpisów (transakcje + splity paragonów) wskazujących tę kategorię. */
+    suspend fun countEntries(categoryId: String): Outcome<Int>
+
+    /**
+     * „Usuwa" kategorię — pod spodem dezaktywacja (soft-delete). Gdy [moveEntriesToId] != null,
+     * wpisy zostają najpierw przepięte na wskazaną kategorię; gdy null — zostają przy starej
+     * (znika tylko z listy i wyboru przy nowych wydatkach). Budżet kategorii jest usuwany.
+     */
+    suspend fun deactivate(categoryId: String, moveEntriesToId: String?): Outcome<Unit>
 }
 
 interface TransactionRepository {

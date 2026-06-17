@@ -12,6 +12,14 @@ sealed interface ToastMessage {
 
     data class CategoryAdded(val name: String, val budget: Money?) : Success
 
+    data class CategoryUpdated(val name: String) : Success
+
+    data class CategoryDeleted(
+        val name: String,
+        val movedCount: Int?,
+        val targetName: String?,
+    ) : Success
+
     data object ExpenseSaved : Success
 
     data object ReceiptSaved : Success
@@ -19,6 +27,10 @@ sealed interface ToastMessage {
     data object ReceiptDeleted : Success
 
     data object CategoryAddFailed : Error
+
+    data object CategoryUpdateFailed : Error
+
+    data object CategoryDeleteFailed : Error
 
     data object ExpenseSaveFailed : Error
 
