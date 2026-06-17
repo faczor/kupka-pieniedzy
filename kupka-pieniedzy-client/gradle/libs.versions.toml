@@ -20,6 +20,7 @@ datetime = "0.6.2"
 koin = "4.1.0"
 ktor = "3.1.3"
 supabase = "3.2.2"
+kermit = "2.0.6"
 spotless = "7.0.2"
 ktfmt = "0.54"
 
@@ -54,8 +55,12 @@ koin-compose-viewmodel = { module = "io.insert-koin:koin-compose-viewmodel", ver
 
 # --- Ktor (HTTP engines for Supabase) ---
 ktor-client-core = { module = "io.ktor:ktor-client-core", version.ref = "ktor" }
+ktor-client-logging = { module = "io.ktor:ktor-client-logging", version.ref = "ktor" }
 ktor-client-okhttp = { module = "io.ktor:ktor-client-okhttp", version.ref = "ktor" }
 ktor-client-darwin = { module = "io.ktor:ktor-client-darwin", version.ref = "ktor" }
+
+# --- Logging (multiplatform) ---
+kermit = { module = "co.touchlab:kermit", version.ref = "kermit" }
 
 # --- Supabase (Postgrest + Storage) ---
 supabase-bom = { module = "io.github.jan-tennert.supabase:bom", version.ref = "supabase" }
