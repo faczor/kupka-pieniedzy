@@ -56,7 +56,6 @@ kotlin {
 
             // Networking / backend
             implementation(libs.ktor.client.core)
-            implementation(libs.ktor.client.logging)
             implementation(project.dependencies.platform(libs.supabase.bom))
             implementation(libs.supabase.postgrest)
             implementation(libs.supabase.storage)
