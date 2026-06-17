@@ -1,28 +1,27 @@
 package com.sd.kupka_pieniedzy_client.domain.event
 
-import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.asSharedFlow
 
 /**
- * Lekki kanał sygnałów „dane się zmieniły” — zapis manualny / paragon / usunięcie emituje tu tik,
- * a ekrany (np. Dashboard) reaktywnie się odświeżają. Bez payloadu: sygnał, nie stan.
+ * Sygnał „dane transakcji się zmieniły” (zapis ręczny, cykl paragonu, usunięcie). Konsumenci
+ * (np. Dashboard) subskrybują [transactionsChanged] i odświeżają się — bez ręcznego wołania `load()`
+ * po każdej ścieżce zapisu.
+ *
+ * Push zamiast pull: brak `supabase-realtime` w projekcie, a Dashboard agreguje wiele zapytań —
+ * wewnętrzny notifier jest lżejszy i pokrywa każdą przyszłą mutację (o ile przejdzie przez Service).
  */
 interface DataChangeNotifier {
-    /** Tik po każdej zmianie transakcji/paragonów — kolektor robi reload. */
     val transactionsChanged: Flow<Unit>
 
     fun notifyTransactionsChanged()
 }
 
 class DefaultDataChangeNotifier : DataChangeNotifier {
-
-    // replay=0: tylko bieżący stan obserwatorów. Bufor 1 + DROP_OLDEST, by emisja z kodu nie-suspend
-    // (tryEmit) nigdy się nie zablokowała ani nie zgubiła ostatniego tiku.
-    private val _transactionsChanged =
-        MutableSharedFlow<Unit>(extraBufferCapacity = 1, onBufferOverflow = BufferOverflow.DROP_OLDEST)
-
+    // extraBufferCapacity = 1 → tryEmit nie gubi sygnału, gdy brak aktywnego kolektora; replay = 0,
+    // bo każdy sygnał to „odśwież teraz”, nie stan do odtworzenia dla nowych subskrybentów.
+    private val _transactionsChanged = MutableSharedFlow<Unit>(extraBufferCapacity = 1)
     override val transactionsChanged: Flow<Unit> = _transactionsChanged.asSharedFlow()
 
     override fun notifyTransactionsChanged() {
