@@ -116,8 +116,20 @@ interface Strings {
     fun categoryAddedSubtitle(name: String, budgetFormatted: String?): String
 
     val categoryAddErrorTitle: String
-    val categoryAddErrorSubtitle: String
     val retryShort: String
+
+    // --- Toasty (globalne, per akcja zapisu) ---
+    val toastErrorSubtitle: String
+    val expenseSavedTitle: String
+    val expenseSavedSubtitle: String
+    val expenseSaveErrorTitle: String
+    val receiptSavedTitle: String
+    val receiptSavedSubtitle: String
+    val receiptSaveErrorTitle: String
+    val receiptDeletedTitle: String
+    val receiptDeleteErrorTitle: String
+    val receiptReanalyzeErrorTitle: String
+    val receiptAnalysisErrorTitle: String
 
     // --- Miesiące (mianownik, np. "Czerwiec") ---
     fun monthName(month: Int): String

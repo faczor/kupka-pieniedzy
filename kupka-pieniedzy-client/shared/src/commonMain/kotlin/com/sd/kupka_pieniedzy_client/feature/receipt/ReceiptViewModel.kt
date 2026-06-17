@@ -3,6 +3,8 @@ package com.sd.kupka_pieniedzy_client.feature.receipt
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.sd.kupka_pieniedzy_client.core.error.DomainError
+import com.sd.kupka_pieniedzy_client.core.presentation.ToastController
+import com.sd.kupka_pieniedzy_client.core.presentation.ToastMessage
 import com.sd.kupka_pieniedzy_client.core.result.fold
 import com.sd.kupka_pieniedzy_client.domain.model.AnalyzedReceipt
 import com.sd.kupka_pieniedzy_client.domain.model.Category
@@ -33,6 +35,7 @@ data class ReceiptUiState(
 class ReceiptViewModel(
     private val receiptService: ReceiptService,
     private val categoryService: CategoryService,
+    private val toast: ToastController,
 ) : ViewModel() {
 
     private val _state = MutableStateFlow(ReceiptUiState())
@@ -95,8 +98,12 @@ class ReceiptViewModel(
                     onSuccess = {
                         _state.update { it.copy(saving = false) }
                         onSaved()
+                        toast.show(ToastMessage.ReceiptSaved)
                     },
-                    onFailure = { e -> _state.update { it.copy(saving = false, actionError = e) } },
+                    onFailure = { e ->
+                        _state.update { it.copy(saving = false, actionError = e) }
+                        toast.show(ToastMessage.ReceiptSaveFailed) { save(onSaved) }
+                    },
                 )
         }
     }
@@ -107,8 +114,14 @@ class ReceiptViewModel(
             receiptService
                 .deleteReceipt(id)
                 .fold(
-                    onSuccess = { onDeleted() },
-                    onFailure = { e -> _state.update { it.copy(actionError = e) } },
+                    onSuccess = {
+                        onDeleted()
+                        toast.show(ToastMessage.ReceiptDeleted)
+                    },
+                    onFailure = { e ->
+                        _state.update { it.copy(actionError = e) }
+                        toast.show(ToastMessage.ReceiptDeleteFailed) { delete(onDeleted) }
+                    },
                 )
         }
     }
@@ -122,7 +135,10 @@ class ReceiptViewModel(
                 .runAnalysis(id, path)
                 .fold(
                     onSuccess = { load(id) },
-                    onFailure = { e -> _state.update { it.copy(loading = false, actionError = e) } },
+                    onFailure = { e ->
+                        _state.update { it.copy(loading = false, actionError = e) }
+                        toast.show(ToastMessage.ReceiptReanalyzeFailed) { reanalyze() }
+                    },
                 )
         }
     }

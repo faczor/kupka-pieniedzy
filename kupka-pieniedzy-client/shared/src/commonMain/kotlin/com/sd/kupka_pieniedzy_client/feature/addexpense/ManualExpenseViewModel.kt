@@ -4,6 +4,8 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.sd.kupka_pieniedzy_client.core.error.DomainError
 import com.sd.kupka_pieniedzy_client.core.money.Money
+import com.sd.kupka_pieniedzy_client.core.presentation.ToastController
+import com.sd.kupka_pieniedzy_client.core.presentation.ToastMessage
 import com.sd.kupka_pieniedzy_client.core.result.fold
 import com.sd.kupka_pieniedzy_client.core.time.DateProvider
 import com.sd.kupka_pieniedzy_client.domain.model.Category
@@ -37,6 +39,7 @@ data class ManualExpenseUiState(
 class ManualExpenseViewModel(
     private val expenseService: ExpenseService,
     private val categoryService: CategoryService,
+    private val toast: ToastController,
     dateProvider: DateProvider,
 ) : ViewModel() {
 
@@ -94,8 +97,12 @@ class ManualExpenseViewModel(
                     onSuccess = {
                         _state.update { it.copy(saving = false) }
                         onSaved()
+                        toast.show(ToastMessage.ExpenseSaved)
                     },
-                    onFailure = { e -> _state.update { it.copy(saving = false, saveError = e) } },
+                    onFailure = { e ->
+                        _state.update { it.copy(saving = false, saveError = e) }
+                        toast.show(ToastMessage.ExpenseSaveFailed) { save(onSaved) }
+                    },
                 )
         }
     }

@@ -24,11 +24,9 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.sd.kupka_pieniedzy_client.core.money.MoneyFormatter
 import com.sd.kupka_pieniedzy_client.designsystem.component.AppText
 import com.sd.kupka_pieniedzy_client.designsystem.component.DashedButton
-import com.sd.kupka_pieniedzy_client.designsystem.component.ErrorToast
 import com.sd.kupka_pieniedzy_client.designsystem.component.IconTile
 import com.sd.kupka_pieniedzy_client.designsystem.component.KupkaBottomSheet
 import com.sd.kupka_pieniedzy_client.designsystem.component.StateContainer
-import com.sd.kupka_pieniedzy_client.designsystem.component.SuccessToast
 import com.sd.kupka_pieniedzy_client.designsystem.component.TextVariant
 import com.sd.kupka_pieniedzy_client.designsystem.icon.AppIcons
 import com.sd.kupka_pieniedzy_client.designsystem.icon.MaterialSymbol
@@ -43,7 +41,6 @@ import org.koin.compose.viewmodel.koinViewModel
 fun CategoriesScreen() {
     val vm: CategoriesViewModel = koinViewModel()
     val listState by vm.list.collectAsStateWithLifecycle()
-    val toast by vm.toast.collectAsStateWithLifecycle()
     val colors = KupkaTheme.colors
     val strings = LocalStrings.current
     var showCreate by remember { mutableStateOf(false) }
@@ -97,38 +94,6 @@ fun CategoriesScreen() {
                 },
                 onCreated = { showCreate = false },
             )
-        }
-
-        // Toasty potwierdzenia — rysowane na końcu, więc leżą nad arkuszem i scrimem.
-        when (val current = toast) {
-            is CategoryToast.Added ->
-                SuccessToast(
-                    title = strings.categoryAddedTitle,
-                    subtitle =
-                        strings.categoryAddedSubtitle(
-                            current.name,
-                            current.budget?.let {
-                                MoneyFormatter.format(it, withDecimals = false)
-                            },
-                        ),
-                    onDismiss = vm::dismissToast,
-                    modifier =
-                        Modifier.align(Alignment.BottomCenter)
-                            .padding(horizontal = 14.dp)
-                            .padding(bottom = 70.dp),
-                )
-            CategoryToast.AddFailed ->
-                ErrorToast(
-                    title = strings.categoryAddErrorTitle,
-                    subtitle = strings.categoryAddErrorSubtitle,
-                    actionText = strings.retryShort,
-                    onAction = { vm.create(onCreated = { showCreate = false }) },
-                    modifier =
-                        Modifier.align(Alignment.TopCenter)
-                            .padding(horizontal = 14.dp)
-                            .padding(top = 8.dp),
-                )
-            null -> Unit
         }
     }
 }

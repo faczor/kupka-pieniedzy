@@ -3,6 +3,8 @@ package com.sd.kupka_pieniedzy_client.feature.addexpense
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.sd.kupka_pieniedzy_client.core.error.DomainError
+import com.sd.kupka_pieniedzy_client.core.presentation.ToastController
+import com.sd.kupka_pieniedzy_client.core.presentation.ToastMessage
 import com.sd.kupka_pieniedzy_client.core.result.fold
 import com.sd.kupka_pieniedzy_client.core.result.onFailure
 import com.sd.kupka_pieniedzy_client.domain.service.ReceiptService
@@ -15,7 +17,10 @@ import kotlinx.coroutines.launch
  * Steruje wyborem trybu dodawania i startem analizy paragonu (async). Manualne dodawanie ma osobny
  * ekran/VM ([com.sd.kupka_pieniedzy_client.feature.addexpense.ManualExpenseViewModel]).
  */
-class AddExpenseViewModel(private val receiptService: ReceiptService) : ViewModel() {
+class AddExpenseViewModel(
+    private val receiptService: ReceiptService,
+    private val toast: ToastController,
+) : ViewModel() {
 
     private val _starting = MutableStateFlow(false)
     val starting: StateFlow<Boolean> = _starting.asStateFlow()
@@ -38,12 +43,16 @@ class AddExpenseViewModel(private val receiptService: ReceiptService) : ViewMode
                     onSuccess = { id ->
                         _starting.value = false
                         onStarted()
-                        receiptService.runAnalysis(id, imagePath).onFailure { _error.value = it }
+                        receiptService.runAnalysis(id, imagePath).onFailure {
+                            _error.value = it
+                            toast.show(ToastMessage.ReceiptAnalysisFailed)
+                        }
                         onCompleted()
                     },
                     onFailure = {
                         _starting.value = false
                         _error.value = it
+                        toast.show(ToastMessage.ReceiptAnalysisFailed)
                     },
                 )
         }

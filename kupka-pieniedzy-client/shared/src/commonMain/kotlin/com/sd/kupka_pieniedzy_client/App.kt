@@ -17,6 +17,7 @@ import com.sd.kupka_pieniedzy_client.core.config.AppConfigLoader
 import com.sd.kupka_pieniedzy_client.core.time.LocalToday
 import com.sd.kupka_pieniedzy_client.core.time.SystemDateProvider
 import com.sd.kupka_pieniedzy_client.data.di.dataModule
+import com.sd.kupka_pieniedzy_client.designsystem.component.GlobalToastHost
 import com.sd.kupka_pieniedzy_client.designsystem.theme.KupkaDarkColors
 import com.sd.kupka_pieniedzy_client.designsystem.theme.KupkaTheme
 import com.sd.kupka_pieniedzy_client.di.appModule
@@ -67,6 +68,7 @@ fun App() {
                             .safeDrawingPadding()
                 ) {
                     AppNavHost()
+                    GlobalToastHost()
                 }
             }
         }

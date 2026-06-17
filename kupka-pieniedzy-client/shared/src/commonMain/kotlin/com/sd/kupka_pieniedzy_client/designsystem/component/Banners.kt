@@ -121,9 +121,9 @@ fun ReadyToast(
 @Composable
 fun SuccessToast(
     title: String,
-    subtitle: String,
     onDismiss: () -> Unit,
     modifier: Modifier = Modifier,
+    subtitle: String? = null,
     durationMillis: Int = 3000,
 ) {
     val colors = KupkaTheme.colors
@@ -160,7 +160,9 @@ fun SuccessToast(
                 verticalArrangement = Arrangement.spacedBy(1.dp),
             ) {
                 AppText(title, variant = TextVariant.Label, color = colors.onSurfaceHigh)
-                AppText(subtitle, variant = TextVariant.Caption, color = colors.onSurfaceMedium)
+                if (subtitle != null) {
+                    AppText(subtitle, variant = TextVariant.Caption, color = colors.onSurfaceMedium)
+                }
             }
             MaterialSymbol(AppIcons.Close, size = 20.dp, tint = colors.onSurfaceLow)
         }
@@ -179,16 +181,17 @@ fun SuccessToast(
 }
 
 /**
- * Toast błędu — zostaje na ekranie, dopóki użytkownik nie ponowi akcji. Akcja [actionText] (np.
- * „Ponów”) wywołuje [onAction].
+ * Toast błędu — zostaje na ekranie do tapnięcia ([onDismiss]) lub ponowienia. Gdy podano
+ * [actionText] + [onAction], pokazuje akcję (np. „Ponów”).
  */
 @Composable
 fun ErrorToast(
     title: String,
     subtitle: String,
-    actionText: String,
-    onAction: () -> Unit,
+    onDismiss: () -> Unit,
     modifier: Modifier = Modifier,
+    actionText: String? = null,
+    onAction: (() -> Unit)? = null,
 ) {
     val colors = KupkaTheme.colors
     Row(
@@ -198,6 +201,7 @@ fun ErrorToast(
                 .clip(RoundedCornerShape(16.dp))
                 .background(colors.surfaceModal)
                 .border(1.dp, colors.budgetRedFill.copy(alpha = 0.32f), RoundedCornerShape(16.dp))
+                .clickable(onClick = onDismiss)
                 .padding(horizontal = 15.dp, vertical = 13.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(12.dp),
@@ -215,12 +219,14 @@ fun ErrorToast(
             AppText(title, variant = TextVariant.Label, color = colors.onSurfaceHigh)
             AppText(subtitle, variant = TextVariant.Caption, color = colors.onSurfaceMedium)
         }
-        AppText(
-            actionText,
-            variant = TextVariant.Label,
-            color = colors.budgetRedFill,
-            modifier = Modifier.clickable(onClick = onAction),
-        )
+        if (actionText != null && onAction != null) {
+            AppText(
+                actionText,
+                variant = TextVariant.Label,
+                color = colors.budgetRedFill,
+                modifier = Modifier.clickable(onClick = onAction),
+            )
+        }
     }
 }
 

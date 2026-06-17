@@ -5,6 +5,8 @@ import androidx.lifecycle.viewModelScope
 import com.sd.kupka_pieniedzy_client.core.error.DomainError
 import com.sd.kupka_pieniedzy_client.core.money.Money
 import com.sd.kupka_pieniedzy_client.core.presentation.ScreenState
+import com.sd.kupka_pieniedzy_client.core.presentation.ToastController
+import com.sd.kupka_pieniedzy_client.core.presentation.ToastMessage
 import com.sd.kupka_pieniedzy_client.core.result.fold
 import com.sd.kupka_pieniedzy_client.designsystem.icon.DefaultCategoryIcon
 import com.sd.kupka_pieniedzy_client.designsystem.theme.CategoryColorPalette
@@ -32,25 +34,16 @@ data class NewCategoryForm(
         get() = !saving && name.isNotBlank()
 }
 
-/** Stan toastu potwierdzenia na ekranie Kategorie. */
-sealed interface CategoryToast {
-    /** Sukces — auto-dismiss po 3 s, tap = zamknij. */
-    data class Added(val name: String, val budget: Money?) : CategoryToast
-
-    /** Błąd — zostaje, dopóki użytkownik nie ponowi (sheet pozostaje otwarty). */
-    data object AddFailed : CategoryToast
-}
-
-class CategoriesViewModel(private val categoryService: CategoryService) : ViewModel() {
+class CategoriesViewModel(
+    private val categoryService: CategoryService,
+    private val toast: ToastController,
+) : ViewModel() {
 
     private val _list = MutableStateFlow<ScreenState<List<Category>>>(ScreenState.Loading)
     val list: StateFlow<ScreenState<List<Category>>> = _list.asStateFlow()
 
     private val _form = MutableStateFlow(NewCategoryForm())
     val form: StateFlow<NewCategoryForm> = _form.asStateFlow()
-
-    private val _toast = MutableStateFlow<CategoryToast?>(null)
-    val toast: StateFlow<CategoryToast?> = _toast.asStateFlow()
 
     init {
         load()
@@ -70,10 +63,6 @@ class CategoriesViewModel(private val categoryService: CategoryService) : ViewMo
     }
 
     fun resetForm() = _form.update { NewCategoryForm() }
-
-    fun dismissToast() {
-        _toast.value = null
-    }
 
     fun onNameChange(value: String) = _form.update { it.copy(name = value) }
 
@@ -106,11 +95,11 @@ class CategoriesViewModel(private val categoryService: CategoryService) : ViewMo
                         _form.value = NewCategoryForm()
                         onCreated()
                         load()
-                        _toast.value = CategoryToast.Added(current.name, budget)
+                        toast.show(ToastMessage.CategoryAdded(current.name, budget))
                     },
                     onFailure = { e ->
                         _form.update { it.copy(saving = false, error = e) }
-                        _toast.value = CategoryToast.AddFailed
+                        toast.show(ToastMessage.CategoryAddFailed) { create(onCreated) }
                     },
                 )
         }
