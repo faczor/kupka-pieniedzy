@@ -1,0 +1,245 @@
+package com.sd.kupka_pieniedzy_client.feature.dashboard
+
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.sd.kupka_pieniedzy_client.core.money.MoneyFormatter
+import com.sd.kupka_pieniedzy_client.core.presentation.ScreenState
+import com.sd.kupka_pieniedzy_client.designsystem.component.AppText
+import com.sd.kupka_pieniedzy_client.designsystem.component.AsyncBanner
+import com.sd.kupka_pieniedzy_client.designsystem.component.BudgetRow
+import com.sd.kupka_pieniedzy_client.designsystem.component.KupkaBottomSheet
+import com.sd.kupka_pieniedzy_client.designsystem.component.KupkaCard
+import com.sd.kupka_pieniedzy_client.designsystem.component.KupkaListCard
+import com.sd.kupka_pieniedzy_client.designsystem.component.KupkaProgressBar
+import com.sd.kupka_pieniedzy_client.designsystem.component.PrimaryButton
+import com.sd.kupka_pieniedzy_client.designsystem.component.ReadyToast
+import com.sd.kupka_pieniedzy_client.designsystem.component.SectionHeader
+import com.sd.kupka_pieniedzy_client.designsystem.component.StateContainer
+import com.sd.kupka_pieniedzy_client.designsystem.component.TextVariant
+import com.sd.kupka_pieniedzy_client.designsystem.component.TransactionRow
+import com.sd.kupka_pieniedzy_client.designsystem.icon.AppIcons
+import com.sd.kupka_pieniedzy_client.designsystem.icon.MaterialSymbol
+import com.sd.kupka_pieniedzy_client.designsystem.theme.KupkaTheme
+import com.sd.kupka_pieniedzy_client.domain.model.DashboardSnapshot
+import com.sd.kupka_pieniedzy_client.feature.addexpense.AddExpenseViewModel
+import com.sd.kupka_pieniedzy_client.feature.addexpense.AddModeSheetContent
+import com.sd.kupka_pieniedzy_client.feature.addexpense.ReceiptPickerSheetContent
+import com.sd.kupka_pieniedzy_client.localization.LocalStrings
+import com.sd.kupka_pieniedzy_client.navigation.AppBottomBar
+import com.sd.kupka_pieniedzy_client.navigation.LocalNavigator
+import com.sd.kupka_pieniedzy_client.navigation.Route
+import org.koin.compose.viewmodel.koinViewModel
+
+private const val MOCK_IMAGE_PATH = "local://mock-receipt.jpg"
+
+@Composable
+fun DashboardScreen() {
+    val nav = LocalNavigator.current
+    val dashboardVm: DashboardViewModel = koinViewModel()
+    val addVm: AddExpenseViewModel = koinViewModel()
+    val state by dashboardVm.state.collectAsStateWithLifecycle()
+
+    var showModeSheet by remember { mutableStateOf(false) }
+    var showPicker by remember { mutableStateOf(false) }
+
+    Box(modifier = Modifier.fillMaxSize().background(KupkaTheme.colors.surfaceBg)) {
+        Column(modifier = Modifier.fillMaxSize()) {
+            StateContainer(
+                state = state,
+                onRetry = dashboardVm::load,
+                modifier = Modifier.weight(1f),
+            ) { snapshot ->
+                DashboardContent(
+                    snapshot = snapshot,
+                    onAddExpense = { showModeSheet = true },
+                    onOpenProcessing = {
+                        snapshot.readyReceipt?.let { nav.push(Route.Receipt(it.receiptId)) }
+                    },
+                    onSeeAllBudgets = { nav.selectTab(Route.Categories) },
+                    onSeeAllEntries = { nav.selectTab(Route.Entries) },
+                )
+            }
+            AppBottomBar(selected = 0)
+        }
+
+        // Toast „paragon gotowy” (overlay u góry)
+        (state as? ScreenState.Content)?.value?.readyReceipt?.let { ready ->
+            val strings = LocalStrings.current
+            ReadyToast(
+                title = strings.receiptReadyTitle(ready.store),
+                subtitle = strings.receiptReadySubtitle(ready.itemCount, ready.confidencePercent),
+                actionText = strings.receiptReadyAction,
+                onClick = { nav.push(Route.Receipt(ready.receiptId)) },
+                modifier =
+                    Modifier.align(Alignment.TopCenter).padding(horizontal = 14.dp, vertical = 8.dp),
+            )
+        }
+
+        KupkaBottomSheet(visible = showModeSheet, onDismiss = { showModeSheet = false }) {
+            AddModeSheetContent(
+                onManual = {
+                    showModeSheet = false
+                    nav.push(Route.AddManualExpense)
+                },
+                onReceipt = {
+                    showModeSheet = false
+                    showPicker = true
+                },
+                onClose = { showModeSheet = false },
+            )
+        }
+
+        KupkaBottomSheet(visible = showPicker, onDismiss = { showPicker = false }) {
+            ReceiptPickerSheetContent(
+                onCancel = { showPicker = false },
+                onConfirm = {
+                    addVm.startReceiptAnalysis(
+                        imagePath = MOCK_IMAGE_PATH,
+                        onStarted = {
+                            showPicker = false
+                            dashboardVm.load()
+                        },
+                        onCompleted = { dashboardVm.load() },
+                    )
+                },
+            )
+        }
+    }
+}
+
+@Composable
+private fun DashboardContent(
+    snapshot: DashboardSnapshot,
+    onAddExpense: () -> Unit,
+    onOpenProcessing: () -> Unit,
+    onSeeAllBudgets: () -> Unit,
+    onSeeAllEntries: () -> Unit,
+) {
+    val colors = KupkaTheme.colors
+    val strings = LocalStrings.current
+    Column(
+        modifier =
+            Modifier.fillMaxSize()
+                .verticalScroll(rememberScrollState())
+                .padding(horizontal = KupkaTheme.spacing.screenH)
+    ) {
+        // Header: miesiąc + awatar
+        Row(
+            modifier = Modifier.fillMaxWidth().padding(top = 8.dp, bottom = 18.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            AppText(
+                text = strings.monthName(snapshot.month).uppercase(),
+                variant = TextVariant.HeroLabel,
+                color = colors.onSurfaceLow,
+            )
+            Box(
+                modifier =
+                    Modifier.size(36.dp)
+                        .clip(KupkaTheme.shapes.pillShape)
+                        .background(colors.primary.copy(alpha = 0.16f)),
+                contentAlignment = Alignment.Center,
+            ) {
+                MaterialSymbol("person", size = 20.dp, tint = colors.primaryHover)
+            }
+        }
+
+        // Hero „Zostało do wydania”
+        AppText(
+            strings.balanceLabel.uppercase(),
+            variant = TextVariant.HeroLabel,
+            color = colors.onSurfaceLow,
+        )
+        AppText(
+            text = MoneyFormatter.format(snapshot.remaining, withDecimals = false),
+            variant = TextVariant.HeroNumber,
+            color = colors.onSurfaceHigh,
+            modifier = Modifier.padding(top = 6.dp),
+        )
+        AppText(
+            text =
+                strings.ofBudgetWithDaysLeft(
+                    MoneyFormatter.format(snapshot.totalBudget, withDecimals = false),
+                    snapshot.daysLeftInMonth,
+                ),
+            variant = TextVariant.Caption,
+            color = colors.onSurfaceMedium,
+            modifier = Modifier.padding(top = 8.dp),
+        )
+        KupkaProgressBar(
+            progress = snapshot.spentRatio,
+            fillColor = colors.primary,
+            trackColor = colors.onSurfaceHigh.copy(alpha = 0.08f),
+            height = 6.dp,
+            modifier = Modifier.padding(top = 12.dp),
+        )
+
+        if (snapshot.processingReceiptsCount > 0) {
+            AsyncBanner(
+                title = strings.receiptsInAnalysisTitle(snapshot.processingReceiptsCount),
+                subtitle = strings.receiptsInAnalysisSubtitle,
+                onClick = onOpenProcessing,
+                modifier = Modifier.padding(top = 18.dp),
+            )
+        }
+
+        // Budżety
+        SectionHeader(
+            strings.budgetsSection,
+            actionText = strings.seeAll,
+            onActionClick = onSeeAllBudgets,
+            modifier = Modifier.padding(top = 22.dp, bottom = 12.dp),
+        )
+        KupkaCard {
+            snapshot.budgets.forEachIndexed { index, progress ->
+                if (index > 0) Spacer(Modifier.height(14.dp))
+                BudgetRow(progress)
+            }
+        }
+
+        // Ostatnie wpisy
+        SectionHeader(
+            strings.recentEntriesSection,
+            actionText = strings.seeAll,
+            onActionClick = onSeeAllEntries,
+            modifier = Modifier.padding(top = 20.dp, bottom = 10.dp),
+        )
+        KupkaListCard {
+            snapshot.recentEntries.forEachIndexed { index, entry ->
+                TransactionRow(
+                    entry = entry,
+                    showDivider = index < snapshot.recentEntries.lastIndex,
+                )
+            }
+        }
+
+        PrimaryButton(
+            text = strings.addExpense,
+            onClick = onAddExpense,
+            leadingIcon = AppIcons.Add,
+            modifier = Modifier.padding(top = 18.dp, bottom = 24.dp),
+        )
+    }
+}

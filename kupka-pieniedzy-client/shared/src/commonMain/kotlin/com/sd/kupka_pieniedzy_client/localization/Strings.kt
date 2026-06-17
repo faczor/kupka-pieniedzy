@@ -1,0 +1,131 @@
+package com.sd.kupka_pieniedzy_client.localization
+
+import com.sd.kupka_pieniedzy_client.core.error.DomainError
+import com.sd.kupka_pieniedzy_client.core.error.ValidationRule
+
+/**
+ * Wszystkie teksty UI. Żadnych literałów w warstwie prezentacji — wszystko stąd, dla aktualnie
+ * wybranego języka (na teraz tylko polski — [PlStrings]).
+ */
+interface Strings {
+
+    val appName: String
+
+    // --- Nawigacja (dolny pasek) ---
+    val navHome: String
+    val navEntries: String
+    val navBudgets: String
+    val navSearch: String
+
+    // --- Wspólne ---
+    val seeAll: String
+    val cancel: String
+    val retry: String
+    val edit: String
+    val save: String
+    val close: String
+    val today: String
+    val yesterday: String
+    val optional: String
+    val comingSoon: String
+
+    // --- Dashboard ---
+    val balanceLabel: String
+    val budgetsSection: String
+    val recentEntriesSection: String
+    val addExpense: String
+
+    fun ofBudgetWithDaysLeft(budgetFormatted: String, daysLeft: Int): String
+
+    fun receiptsInAnalysisTitle(count: Int): String
+
+    val receiptsInAnalysisSubtitle: String
+
+    fun receiptReadyTitle(store: String): String
+
+    fun receiptReadySubtitle(items: Int, confidencePercent: Int): String
+
+    val receiptReadyAction: String
+    val badgeNew: String
+
+    fun entryMetaItems(category: String, items: Int, relativeDay: String): String
+
+    fun entryMeta(category: String, relativeDay: String): String
+
+    // --- Dodawanie wydatku ---
+    val addModeManualTitle: String
+    val addModeManualSubtitle: String
+    val addModeReceiptTitle: String
+    val addModeReceiptSubtitle: String
+    val aiBadge: String
+    val newExpenseTitle: String
+    val fieldAmount: String
+    val fieldCategory: String
+    val fieldName: String
+    val fieldDate: String
+    val fallbackToOtherHint: String
+    val saveExpense: String
+
+    // --- Wybór pliku (paragon) ---
+    val pickReceiptTitle: String
+    val sourceGallery: String
+    val sourceFiles: String
+    val recent: String
+    val addAndAnalyze: String
+
+    // --- Paragon (wynik analizy) ---
+    val receiptTitle: String
+
+    fun itemsHeader(count: Int): String
+
+    fun showAllItems(count: Int): String
+
+    fun lowConfidenceTitle(confidencePercent: Int): String
+
+    fun unassignedItems(count: Int): String
+
+    val pickCategory: String
+
+    fun completeCategoriesCta(count: Int): String
+
+    val itemCategorySheetTitle: String
+    val groceriesSubcategoriesLabel: String
+    val newSubcategory: String
+
+    fun assignCategory(category: String): String
+
+    val receiptSourceTitle: String
+    val doubleTapToZoom: String
+    val backToBreakdown: String
+    val actionReanalyze: String
+    val actionReanalyzeSubtitle: String
+    val actionEditStoreDate: String
+    val actionEditStoreDateSubtitle: String
+    val actionDeleteReceipt: String
+    val actionDeleteReceiptSubtitle: String
+
+    // --- Kategorie ---
+    val categoriesTitle: String
+
+    fun subcategoriesCount(count: Int): String
+
+    val defaultBadge: String
+    val defaultCategoryHint: String
+    val newCategory: String
+    val sectionIcon: String
+    val sectionColor: String
+    val monthlyBudget: String
+    val perMonthSuffix: String
+    val createCategory: String
+
+    // --- Miesiące (mianownik, np. "Czerwiec") ---
+    fun monthName(month: Int): String
+
+    /** Skrót miesiąca do dat typu „16 cze”. */
+    fun monthShort(month: Int): String
+
+    // --- Błędy ---
+    fun errorMessage(error: DomainError): String
+
+    fun validationMessage(rule: ValidationRule): String
+}
