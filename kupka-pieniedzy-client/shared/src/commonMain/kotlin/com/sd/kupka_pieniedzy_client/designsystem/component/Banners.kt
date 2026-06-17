@@ -27,6 +27,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.rotate
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import com.sd.kupka_pieniedzy_client.designsystem.icon.AppIcons
 import com.sd.kupka_pieniedzy_client.designsystem.icon.MaterialSymbol
@@ -115,6 +116,54 @@ fun ReadyToast(
 }
 
 @Composable
+private fun BaseToast(
+    accent: Color,
+    icon: String,
+    title: String,
+    subtitle: String?,
+    onDismiss: () -> Unit,
+    modifier: Modifier = Modifier,
+    borderAlpha: Float = 0.30f,
+    trailing: @Composable (() -> Unit)? = null,
+    footer: @Composable (() -> Unit)? = null,
+) {
+    val colors = KupkaTheme.colors
+    Column(
+        modifier =
+            modifier
+                .fillMaxWidth()
+                .clip(RoundedCornerShape(16.dp))
+                .background(colors.surfaceModal)
+                .border(1.dp, accent.copy(alpha = borderAlpha), RoundedCornerShape(16.dp))
+                .clickable(onClick = onDismiss)
+    ) {
+        Row(
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 15.dp, vertical = 13.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+        ) {
+            Box(
+                modifier =
+                    Modifier.size(40.dp)
+                        .clip(RoundedCornerShape(11.dp))
+                        .background(accent.copy(alpha = 0.15f)),
+                contentAlignment = Alignment.Center,
+            ) {
+                MaterialSymbol(icon, size = 22.dp, tint = accent)
+            }
+            Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(1.dp)) {
+                AppText(title, variant = TextVariant.Label, color = colors.onSurfaceHigh)
+                if (subtitle != null) {
+                    AppText(subtitle, variant = TextVariant.Caption, color = colors.onSurfaceMedium)
+                }
+            }
+            trailing?.invoke()
+        }
+        footer?.invoke()
+    }
+}
+
+@Composable
 fun SuccessToast(
     title: String,
     onDismiss: () -> Unit,
@@ -128,52 +177,30 @@ fun SuccessToast(
         progress.animateTo(0f, animationSpec = tween(durationMillis, easing = LinearEasing))
         onDismiss()
     }
-    Column(
-        modifier =
-            modifier
-                .fillMaxWidth()
-                .clip(RoundedCornerShape(16.dp))
-                .background(colors.surfaceModal)
-                .border(1.dp, colors.budgetGreenFill.copy(alpha = 0.30f), RoundedCornerShape(16.dp))
-                .clickable(onClick = onDismiss)
-    ) {
-        Row(
-            modifier = Modifier.fillMaxWidth().padding(horizontal = 15.dp, vertical = 13.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(12.dp),
-        ) {
+    BaseToast(
+        accent = colors.budgetGreenFill,
+        icon = AppIcons.CheckCircle,
+        title = title,
+        subtitle = subtitle,
+        onDismiss = onDismiss,
+        modifier = modifier,
+        trailing = { MaterialSymbol(AppIcons.Close, size = 20.dp, tint = colors.onSurfaceLow) },
+        footer = {
             Box(
                 modifier =
-                    Modifier.size(40.dp)
-                        .clip(RoundedCornerShape(11.dp))
-                        .background(colors.budgetGreenFill.copy(alpha = 0.15f)),
-                contentAlignment = Alignment.Center,
+                    Modifier.fillMaxWidth()
+                        .height(3.dp)
+                        .background(colors.budgetGreenFill.copy(alpha = 0.16f))
             ) {
-                MaterialSymbol(AppIcons.CheckCircle, size = 22.dp, tint = colors.budgetGreenFill)
+                Box(
+                    modifier =
+                        Modifier.fillMaxWidth(progress.value)
+                            .height(3.dp)
+                            .background(colors.budgetGreenFill)
+                )
             }
-            Column(
-                modifier = Modifier.weight(1f),
-                verticalArrangement = Arrangement.spacedBy(1.dp),
-            ) {
-                AppText(title, variant = TextVariant.Label, color = colors.onSurfaceHigh)
-                if (subtitle != null) {
-                    AppText(subtitle, variant = TextVariant.Caption, color = colors.onSurfaceMedium)
-                }
-            }
-            MaterialSymbol(AppIcons.Close, size = 20.dp, tint = colors.onSurfaceLow)
-        }
-        Box(
-            modifier =
-                Modifier.fillMaxWidth()
-                    .height(3.dp)
-                    .background(colors.budgetGreenFill.copy(alpha = 0.16f))
-        ) {
-            Box(
-                modifier =
-                    Modifier.fillMaxWidth(progress.value).height(3.dp).background(colors.budgetGreenFill)
-            )
-        }
-    }
+        },
+    )
 }
 
 @Composable
@@ -186,40 +213,28 @@ fun ErrorToast(
     onAction: (() -> Unit)? = null,
 ) {
     val colors = KupkaTheme.colors
-    Row(
-        modifier =
-            modifier
-                .fillMaxWidth()
-                .clip(RoundedCornerShape(16.dp))
-                .background(colors.surfaceModal)
-                .border(1.dp, colors.budgetRedFill.copy(alpha = 0.32f), RoundedCornerShape(16.dp))
-                .clickable(onClick = onDismiss)
-                .padding(horizontal = 15.dp, vertical = 13.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(12.dp),
-    ) {
-        Box(
-            modifier =
-                Modifier.size(40.dp)
-                    .clip(RoundedCornerShape(11.dp))
-                    .background(colors.budgetRedFill.copy(alpha = 0.15f)),
-            contentAlignment = Alignment.Center,
-        ) {
-            MaterialSymbol(AppIcons.Error, size = 22.dp, tint = colors.budgetRedFill)
-        }
-        Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(1.dp)) {
-            AppText(title, variant = TextVariant.Label, color = colors.onSurfaceHigh)
-            AppText(subtitle, variant = TextVariant.Caption, color = colors.onSurfaceMedium)
-        }
-        if (actionText != null && onAction != null) {
-            AppText(
-                actionText,
-                variant = TextVariant.Label,
-                color = colors.budgetRedFill,
-                modifier = Modifier.clickable(onClick = onAction),
-            )
-        }
-    }
+    BaseToast(
+        accent = colors.budgetRedFill,
+        icon = AppIcons.Error,
+        title = title,
+        subtitle = subtitle,
+        onDismiss = onDismiss,
+        modifier = modifier,
+        borderAlpha = 0.32f,
+        trailing =
+            if (actionText != null && onAction != null) {
+                {
+                    AppText(
+                        actionText,
+                        variant = TextVariant.Label,
+                        color = colors.budgetRedFill,
+                        modifier = Modifier.clickable(onClick = onAction),
+                    )
+                }
+            } else {
+                null
+            },
+    )
 }
 
 /** Ostrzeżenie „pewność < 80% — sprawdź pozycje”. */
