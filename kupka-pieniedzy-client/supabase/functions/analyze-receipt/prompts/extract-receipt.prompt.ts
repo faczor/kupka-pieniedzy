@@ -1,6 +1,6 @@
 // Prompt ekstrakcji paragonu (paragony PL). Treść poniżej to czysty prompt w stylu XML;
 // opakowanie w `export default` szablon jest tylko po to, by plik na pewno wszedł do
-// bundla Edge Function. Placeholdery {{...}} podmienia render() z ../prompts.ts.
+// bundla Edge Function.
 //
 // Wejściem jest ZDJĘCIE paragonu (Claude/Haiku vision) — obraz dołączany jest jako
 // osobny blok content obok tego promptu; ten plik nie ma już placeholderów.

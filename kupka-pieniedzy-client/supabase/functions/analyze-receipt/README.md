@@ -23,6 +23,28 @@ Funkcja czyta (service role): obraz ze Storage, kategorie usera i pamięć kateg
 > jako darmowa/prywatna „fast path". Wtedy Etap A dostawałby tekst zamiast obrazu; reszta
 > pipeline'u się nie zmienia.
 
+## Struktura kodu
+
+Domenowy pipeline — flow czyta się krok po kroku, każdy plik ma jedną odpowiedzialność:
+
+```
+index.ts        cienki HTTP boundary (parse → pipeline → odpowiedź/błędy)
+pipeline.ts     FLOW: 5 nazwanych kroków (analyzeReceipt)
+model.ts        typy domenowe + stałe (FALLBACK_CATEGORY)
+errors.ts       PipelineError (kod + status HTTP)
+steps/
+  load-image.ts     1. żądanie → ReceiptImage (Storage/base64 + media_type)
+  load-context.ts   2. userId → UserContext (kategorie + historia)
+  read-receipt.ts   3. ReceiptImage → ReadReceipt (Haiku vision)   [Etap A]
+  categorize.ts     4. ReadReceipt + UserContext → kategorie         [Etap B]
+  assemble.ts       5. → ReceiptAnalysis (grosze, total, confidence)
+services/
+  claude.ts         klient Anthropic + askForJson() + modele (env)
+  supabase.ts       service-role: obraz ze Storage, kategorie, pamięć
+  prompt.ts         render({{…}}) + parseJson()
+prompts/            *.prompt.ts (XML + few-shot)
+```
+
 ## Prompty
 
 Każdy prompt to **osobny plik** w `prompts/` w stylu XML (role / instructions / flow /

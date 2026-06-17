@@ -1,6 +1,6 @@
 // Prompt kategoryzacji pozycji paragonu. Treść poniżej to czysty prompt w stylu XML;
 // opakowanie w export default jest po to, by plik wszedł do bundla Edge Function.
-// Placeholdery {{...}} podmienia render() z ../prompts.ts.
+// Placeholdery {{...}} podmienia render() z ../services/prompt.ts.
 //
 // Zmienne:
 //   {{USER_HISTORY}} — historia kategoryzacji usera ("nazwa => kategoria" po jednej w linii)

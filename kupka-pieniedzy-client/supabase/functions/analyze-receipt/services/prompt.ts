@@ -1,6 +1,4 @@
-// Wspólne narzędzia do promptów: podstawianie zmiennych {{KEY}} i tolerancyjny parser JSON
-// (model proszony jest o czysty JSON, ale na wszelki wypadek zdejmujemy code-fence i obcinamy
-// do pierwszego/ostatniego nawiasu klamrowego).
+// Narzędzia do promptów: podstawianie zmiennych {{KEY}} i tolerancyjny parser JSON.
 
 /** Podstawia {{KEY}} -> value w szablonie promptu. */
 export function render(template: string, vars: Record<string, string>): string {
@@ -11,20 +9,22 @@ export function render(template: string, vars: Record<string, string>): string {
   return out;
 }
 
-/** Wyciąga i parsuje obiekt JSON z odpowiedzi modelu. Rzuca, gdy nie da się sparsować. */
-export function parseJsonObject(text: string): unknown {
+/** Wyciąga i parsuje obiekt JSON z odpowiedzi modelu (zdejmuje code-fence, obcina do {…}). */
+export function parseJson(text: string): Record<string, unknown> {
   let t = text.trim();
 
-  // zdejmij ```json ... ``` / ``` ... ```
   const fence = t.match(/```(?:json)?\s*([\s\S]*?)```/i);
   if (fence) t = fence[1].trim();
 
-  // obetnij do pierwszego "{" .. ostatniego "}"
   if (!t.startsWith("{")) {
     const start = t.indexOf("{");
     const end = t.lastIndexOf("}");
     if (start !== -1 && end > start) t = t.slice(start, end + 1);
   }
 
-  return JSON.parse(t);
+  const parsed = JSON.parse(t);
+  if (typeof parsed !== "object" || parsed === null) {
+    throw new Error("Model did not return a JSON object");
+  }
+  return parsed as Record<string, unknown>;
 }
