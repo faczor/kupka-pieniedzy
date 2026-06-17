@@ -14,6 +14,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -49,7 +50,10 @@ import com.sd.kupka_pieniedzy_client.localization.LocalStrings
 import com.sd.kupka_pieniedzy_client.navigation.AppBottomBar
 import com.sd.kupka_pieniedzy_client.navigation.LocalNavigator
 import com.sd.kupka_pieniedzy_client.navigation.Route
+import kotlinx.coroutines.delay
 import org.koin.compose.viewmodel.koinViewModel
+
+private const val READY_TOAST_AUTO_DISMISS_MS = 5_000L
 
 @Composable
 fun DashboardScreen() {
@@ -95,6 +99,10 @@ fun DashboardScreen() {
 
         (state as? ScreenState.Content)?.value?.readyReceipt?.let { ready ->
             val strings = LocalStrings.current
+            LaunchedEffect(ready.receiptId) {
+                delay(READY_TOAST_AUTO_DISMISS_MS)
+                dashboardVm.acknowledgeReadyReceipt(ready.receiptId)
+            }
             ReadyToast(
                 title = strings.receiptReadyTitle(ready.store),
                 subtitle = strings.receiptReadySubtitle(ready.itemCount, ready.confidencePercent),
