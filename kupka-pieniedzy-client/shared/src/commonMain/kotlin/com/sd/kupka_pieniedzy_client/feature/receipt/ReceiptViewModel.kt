@@ -127,9 +127,7 @@ class ReceiptViewModel(
     }
 
     fun reanalyze() {
-        // MVP (base64-only): oryginalne zdjęcie nie jest trwale przechowywane (nie idzie do
-        // Storage), więc ponowna analiza wymagałaby ponownego wyboru zdjęcia. Do czasu wdrożenia
-        // Storage albo flow „re-pick" sygnalizujemy brak możliwości zamiast wołać analizę bez obrazu.
+        // Wyłączone w wariancie base64 (zdjęcie nieprzechowywane) — patrz TODO.md.
         toast.show(ToastMessage.ReceiptReanalyzeFailed)
     }
 }
