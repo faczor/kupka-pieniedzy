@@ -51,6 +51,20 @@ if [ ! -f "$API_KEY_PATH" ]; then
     exit 1
 fi
 
+# --- [0/3] Synchronizacja wersji z version.properties (jedyne źródło prawdy) ---
+echo -e "${YELLOW}[0/3] Synchronizacja wersji...${NC}"
+if [ ! -f "version.properties" ]; then
+    echo -e "${RED}Błąd: brak version.properties${NC}"
+    exit 1
+fi
+VERSION_NAME=$(grep "^VERSION_NAME=" version.properties | cut -d'=' -f2 | tr -d '\n\r ')
+VERSION_CODE=$(grep "^VERSION_CODE=" version.properties | cut -d'=' -f2 | tr -d '\n\r ')
+XCCONFIG="iosApp/Configuration/Config.xcconfig"
+sed -i '' "s/^MARKETING_VERSION=.*/MARKETING_VERSION=$VERSION_NAME/" "$XCCONFIG"
+sed -i '' "s/^CURRENT_PROJECT_VERSION=.*/CURRENT_PROJECT_VERSION=$VERSION_CODE/" "$XCCONFIG"
+echo -e "  Wersja: ${GREEN}$VERSION_NAME${NC} (Build: ${GREEN}$VERSION_CODE${NC})"
+echo ""
+
 # --- [1/3] Archiwizacja (build phase odpali Gradle: :shared:embedAndSignAppleFrameworkForXcode) ---
 echo -e "${YELLOW}[1/3] Archiwizacja...${NC}"
 mkdir -p "$EXPORT_PATH"

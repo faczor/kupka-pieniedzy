@@ -53,9 +53,16 @@ App Store Connect → TestFlight (przetwarzanie kilka–kilkanaście minut).
 
 ## Bump wersji
 
-Przed każdym kolejnym uploadem podnieś `CURRENT_PROJECT_VERSION` (build number musi rosnąć)
-w `iosApp/Configuration/Config.xcconfig`. `MARKETING_VERSION` (np. `1.0`) bumpujesz przy
-realnych wydaniach.
+Jedyne źródło prawdy: **`version.properties`** (root projektu) — wspólne dla Android i iOS.
+
+- `VERSION_CODE` (build) — podnieś przy **każdym** uploadzie na TestFlight (musi rosnąć).
+- `VERSION_NAME` (wersja) — podnieś przy realnym wydaniu (np. `1.0` → `1.1`).
+
+Android czyta to automatycznie (Gradle). iOS — `deploy-ios.sh` sed-synchronizuje wartości
+do `Config.xcconfig` przed archiwizacją (dlatego `Config.xcconfig` może po deployu pokazać
+zmianę w gicie — to oczekiwane, wartości są pochodne).
+
+Przykład następnego deployu: zmień w `version.properties` `VERSION_CODE=2`, potem `./scripts/ios/deploy-ios.sh`.
 
 ## Migracja na manual signing (przy dodaniu CI)
 
