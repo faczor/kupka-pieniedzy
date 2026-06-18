@@ -3,6 +3,9 @@ package com.sd.kupka_pieniedzy_client.feature.categories
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.sd.kupka_pieniedzy_client.core.error.DomainError
+import com.sd.kupka_pieniedzy_client.core.logging.AppLog
+import com.sd.kupka_pieniedzy_client.core.logging.action
+import com.sd.kupka_pieniedzy_client.core.logging.failure
 import com.sd.kupka_pieniedzy_client.core.money.Money
 import com.sd.kupka_pieniedzy_client.core.presentation.ScreenState
 import com.sd.kupka_pieniedzy_client.core.presentation.ToastController
@@ -87,6 +90,7 @@ class CategoriesViewModel(
     }
 
     fun load() {
+        AppLog.action("Categories.load")
         _list.value = ScreenState.Loading
         viewModelScope.launch {
             _list.value =
@@ -94,7 +98,10 @@ class CategoriesViewModel(
                     .getCategories()
                     .fold(
                         onSuccess = { all -> ScreenState.Content(all.filter { it.level == 1 }) },
-                        onFailure = { ScreenState.Error(it) },
+                        onFailure = {
+                            AppLog.failure("Categories.load", it)
+                            ScreenState.Error(it)
+                        },
                     )
         }
     }
@@ -119,6 +126,10 @@ class CategoriesViewModel(
         val current = _form.value
         if (!current.canCreate) return
         val budget = current.budgetMajor?.takeIf { it > 0 }?.let { Money.ofMajor(it) }
+        AppLog.action(
+            "Categories.create",
+            "name=${current.name} budgetMinor=${budget?.minorUnits}",
+        )
         _form.update { it.copy(saving = true, error = null) }
         viewModelScope.launch {
             categoryService
@@ -138,6 +149,7 @@ class CategoriesViewModel(
                         toast.show(ToastMessage.CategoryAdded(current.name, budget))
                     },
                     onFailure = { e ->
+                        AppLog.failure("Categories.create", e)
                         _form.update { it.copy(saving = false, error = e) }
                         toast.show(ToastMessage.CategoryAddFailed) { create(onCreated) }
                     },

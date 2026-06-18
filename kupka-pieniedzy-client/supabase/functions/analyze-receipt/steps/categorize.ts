@@ -1,8 +1,4 @@
-// Krok 4 (Etap B): pozycje paragonu -> kategorie, w 3 fazach:
-//   1. exact-match z pamięci usera (bez LLM),
-//   2. LLM few-shot (z historią usera) dla nierozpoznanych,
-//   3. fallback "inne".
-// Zwraca kategorię (lub null) dla każdej pozycji, w kolejności receipt.lines.
+// Krok 4 (Etap B): pozycje paragonu -> kategorie (w kolejności receipt.lines).
 import { FALLBACK_CATEGORY, type CategoryExample, type ReadReceipt, type UserContext } from "../model.ts";
 import { askForJson, CATEGORIZATION_MODEL } from "../services/claude.ts";
 import { render } from "../services/prompt.ts";

@@ -3,6 +3,7 @@
 import { corsHeaders } from "../_shared/cors.ts";
 import { analyzeReceipt } from "./pipeline.ts";
 import { PipelineError } from "./errors.ts";
+import { log } from "./log.ts";
 import type { AnalyzeRequest } from "./model.ts";
 
 function json(body: unknown, status = 200): Response {
@@ -24,16 +25,32 @@ Deno.serve(async (request) => {
   try {
     body = await request.json();
   } catch {
+    log.warn("Bad request: body is not JSON");
     return json({ error: { code: "invalid_request", message: "Body must be JSON" } }, 400);
   }
 
+  log.info("Request received", {
+    userId: body.userId ?? null,
+    currency: body.currency ?? null,
+    hasImageBase64: Boolean(body.imageBase64),
+    imagePath: body.imagePath ?? null,
+  });
+
   try {
-    return json(await analyzeReceipt(body));
+    const result = await analyzeReceipt(body);
+    log.info("Request OK", {
+      store: result.store,
+      totalMinor: result.totalMinor,
+      items: result.items.length,
+      confidence: result.confidence,
+    });
+    return json(result);
   } catch (e) {
     if (e instanceof PipelineError) {
+      log.warn("Pipeline error", { code: e.code, status: e.status, message: e.message });
       return json({ error: { code: e.code, message: e.message } }, e.status);
     }
-    console.error("Unhandled error:", e);
+    log.error("Unhandled error", e);
     return json({ error: { code: "internal", message: "Unexpected error" } }, 500);
   }
 });

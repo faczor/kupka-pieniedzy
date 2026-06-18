@@ -88,5 +88,6 @@ interface ReceiptRepository {
 }
 
 interface ReceiptAnalysisRepository {
-    suspend fun analyze(imagePath: String?): Outcome<RawReceiptAnalysis>
+    /** Analiza zdjęcia paragonu (bajty JPEG/PNG) — Edge Function (Haiku vision + kategoryzacja). */
+    suspend fun analyze(image: ByteArray): Outcome<RawReceiptAnalysis>
 }

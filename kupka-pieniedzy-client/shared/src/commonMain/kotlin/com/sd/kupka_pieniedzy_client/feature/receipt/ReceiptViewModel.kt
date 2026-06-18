@@ -3,6 +3,9 @@ package com.sd.kupka_pieniedzy_client.feature.receipt
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.sd.kupka_pieniedzy_client.core.error.DomainError
+import com.sd.kupka_pieniedzy_client.core.logging.AppLog
+import com.sd.kupka_pieniedzy_client.core.logging.action
+import com.sd.kupka_pieniedzy_client.core.logging.failure
 import com.sd.kupka_pieniedzy_client.core.presentation.ToastController
 import com.sd.kupka_pieniedzy_client.core.presentation.ToastMessage
 import com.sd.kupka_pieniedzy_client.core.result.fold
@@ -45,17 +48,22 @@ class ReceiptViewModel(
 
     fun load(receiptId: String) {
         this.receiptId = receiptId
+        AppLog.action("Receipt.load", "receiptId=$receiptId")
         _state.update { it.copy(loading = true, loadError = null) }
         viewModelScope.launch {
             receiptService
                 .getDraft(receiptId)
                 .fold(
-                    onFailure = { e -> _state.update { it.copy(loading = false, loadError = e) } },
+                    onFailure = { e ->
+                        AppLog.failure("Receipt.getDraft", e)
+                        _state.update { it.copy(loading = false, loadError = e) }
+                    },
                     onSuccess = { draft ->
                         categoryService
                             .getCategories()
                             .fold(
                                 onFailure = { e ->
+                                    AppLog.failure("Receipt.getCategories", e)
                                     _state.update { it.copy(loading = false, loadError = e) }
                                 },
                                 onSuccess = { cats ->
@@ -90,6 +98,7 @@ class ReceiptViewModel(
     fun save(onSaved: () -> Unit) {
         val draft = _state.value.draft ?: return
         if (!_state.value.canSave) return
+        AppLog.action("Receipt.save", "receiptId=$receiptId items=${draft.items.size}")
         _state.update { it.copy(saving = true, actionError = null) }
         viewModelScope.launch {
             receiptService
@@ -101,6 +110,7 @@ class ReceiptViewModel(
                         toast.show(ToastMessage.ReceiptSaved)
                     },
                     onFailure = { e ->
+                        AppLog.failure("Receipt.save", e)
                         _state.update { it.copy(saving = false, actionError = e) }
                         toast.show(ToastMessage.ReceiptSaveFailed) { save(onSaved) }
                     },
@@ -110,6 +120,7 @@ class ReceiptViewModel(
 
     fun delete(onDeleted: () -> Unit) {
         val id = receiptId ?: return
+        AppLog.action("Receipt.delete", "receiptId=$id")
         viewModelScope.launch {
             receiptService
                 .deleteReceipt(id)
@@ -119,6 +130,7 @@ class ReceiptViewModel(
                         toast.show(ToastMessage.ReceiptDeleted)
                     },
                     onFailure = { e ->
+                        AppLog.failure("Receipt.delete", e)
                         _state.update { it.copy(actionError = e) }
                         toast.show(ToastMessage.ReceiptDeleteFailed) { delete(onDeleted) }
                     },
@@ -127,19 +139,7 @@ class ReceiptViewModel(
     }
 
     fun reanalyze() {
-        val id = receiptId ?: return
-        val path = _state.value.draft?.imagePath
-        _state.update { it.copy(loading = true) }
-        viewModelScope.launch {
-            receiptService
-                .runAnalysis(id, path)
-                .fold(
-                    onSuccess = { load(id) },
-                    onFailure = { e ->
-                        _state.update { it.copy(loading = false, actionError = e) }
-                        toast.show(ToastMessage.ReceiptReanalyzeFailed) { reanalyze() }
-                    },
-                )
-        }
+        // Wyłączone w wariancie base64 (zdjęcie nieprzechowywane) — patrz TODO.md.
+        toast.show(ToastMessage.ReceiptReanalyzeFailed)
     }
 }
