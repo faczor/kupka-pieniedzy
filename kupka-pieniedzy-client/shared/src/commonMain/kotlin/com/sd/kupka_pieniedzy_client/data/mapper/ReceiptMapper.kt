@@ -2,19 +2,24 @@ package com.sd.kupka_pieniedzy_client.data.mapper
 
 import com.sd.kupka_pieniedzy_client.core.money.Money
 import com.sd.kupka_pieniedzy_client.data.dto.RawOcrJson
+import com.sd.kupka_pieniedzy_client.data.dto.RawOcrLineJson
+import com.sd.kupka_pieniedzy_client.data.dto.RawOcrSuggestedJson
 import com.sd.kupka_pieniedzy_client.data.dto.ReceiptDto
-import com.sd.kupka_pieniedzy_client.data.dto.ReceiptItemJson
+import com.sd.kupka_pieniedzy_client.data.dto.ReceiptItemDto
 import com.sd.kupka_pieniedzy_client.domain.model.AnalyzedItem
 import com.sd.kupka_pieniedzy_client.domain.model.AnalyzedReceipt
+import com.sd.kupka_pieniedzy_client.domain.model.RawReceiptAnalysis
 import com.sd.kupka_pieniedzy_client.domain.model.Receipt
 import kotlinx.datetime.LocalDate
+
+private val EPOCH = LocalDate(1970, 1, 1)
 
 /** [ReceiptDto] → [Receipt] (nagłówek listy paragonów). Braki dat/total tolerujemy. */
 fun ReceiptDto.toDomain(currency: String): Receipt =
     Receipt(
         id = id,
         store = store.orEmpty(),
-        date = date?.let { LocalDate.parse(it) } ?: LocalDate(1970, 1, 1),
+        date = date?.let { LocalDate.parse(it) } ?: EPOCH,
         total = total?.zlToMoney(currency) ?: Money.ZERO.copy(currency = currency),
         imagePath = imagePath,
         transactionId = transactionId,
@@ -22,42 +27,51 @@ fun ReceiptDto.toDomain(currency: String): Receipt =
         confidence = confidence ?: 0f,
     )
 
-/** [AnalyzedReceipt] → [RawOcrJson] do zapisu w `receipts.raw_ocr_json`. */
-fun AnalyzedReceipt.toRawOcrJson(currency: String): RawOcrJson =
+/**
+ * [RawReceiptAnalysis] → [RawOcrJson] do zapisu w `receipts.raw_ocr_json`.
+ * To wewnętrzny artefakt analityczny (surowy odczyt + sugestie AID) — UI go NIE czyta.
+ */
+fun RawReceiptAnalysis.toRawOcrJson(currency: String): RawOcrJson =
     RawOcrJson(
         store = store,
-        date = date.toString(),
+        date = date,
         totalMinor = total.minorUnits,
+        printedTotalMinor = printedTotal?.minorUnits,
         currency = currency,
         confidence = confidence,
-        imagePath = imagePath,
-        items =
+        rawLines =
+            rawLines.map { RawOcrLineJson(name = it.name, amountMinor = it.amount.minorUnits) },
+        suggested =
             items.map {
-                ReceiptItemJson(
-                    id = it.id,
+                RawOcrSuggestedJson(
                     name = it.name,
                     amountMinor = it.amount.minorUnits,
-                    categoryId = it.categoryId,
+                    suggestedCategory = it.suggestedCategoryName,
                 )
             },
     )
 
-/** [RawOcrJson] → [AnalyzedReceipt] (odczyt draftu). */
-fun RawOcrJson.toAnalyzedReceipt(receiptId: String): AnalyzedReceipt =
+/**
+ * Nagłówek paragonu + pozycje z `receipt_items` → [AnalyzedReceipt] (draft do review).
+ * Klient czyta ustrukturyzowany model z tabeli, nie z raw_ocr_json.
+ */
+fun ReceiptDto.toAnalyzedReceipt(items: List<ReceiptItemDto>, currency: String): AnalyzedReceipt =
     AnalyzedReceipt(
-        receiptId = receiptId,
-        store = store,
-        date = LocalDate.parse(date),
-        total = Money(totalMinor, currency),
-        confidence = confidence,
+        receiptId = id,
+        store = store.orEmpty(),
+        date = date?.let { LocalDate.parse(it) } ?: EPOCH,
+        total = total?.zlToMoney(currency) ?: items.fold(Money(0, currency)) { acc, it ->
+            acc + it.amount.zlToMoney(currency)
+        },
+        confidence = confidence ?: 0f,
         imagePath = imagePath,
-        items =
-            items.map {
-                AnalyzedItem(
-                    id = it.id,
-                    name = it.name,
-                    amount = Money(it.amountMinor, currency),
-                    categoryId = it.categoryId,
-                )
-            },
+        items = items.map { it.toAnalyzedItem(currency) },
+    )
+
+fun ReceiptItemDto.toAnalyzedItem(currency: String): AnalyzedItem =
+    AnalyzedItem(
+        id = id,
+        name = name,
+        amount = amount.zlToMoney(currency),
+        categoryId = categoryId,
     )

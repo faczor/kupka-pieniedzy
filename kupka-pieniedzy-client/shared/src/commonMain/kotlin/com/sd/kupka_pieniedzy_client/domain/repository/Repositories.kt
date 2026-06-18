@@ -2,6 +2,7 @@ package com.sd.kupka_pieniedzy_client.domain.repository
 
 import com.sd.kupka_pieniedzy_client.core.money.Money
 import com.sd.kupka_pieniedzy_client.core.result.Outcome
+import com.sd.kupka_pieniedzy_client.domain.model.AnalyzedItem
 import com.sd.kupka_pieniedzy_client.domain.model.AnalyzedReceipt
 import com.sd.kupka_pieniedzy_client.domain.model.BudgetProgress
 import com.sd.kupka_pieniedzy_client.domain.model.Category
@@ -76,14 +77,22 @@ interface ReceiptRepository {
 
     suspend fun getAnalyzed(receiptId: String): Outcome<AnalyzedReceipt>
 
-    suspend fun markReady(receipt: AnalyzedReceipt): Outcome<Unit>
+    /**
+     * Zapisuje wynik analizy: pozycje do ustrukturyzowanej tabeli `receipt_items` (model dla
+     * klienta) oraz surowy odczyt [raw] do `receipts.raw_ocr_json` (wewnętrzny audyt/analiza).
+     */
+    suspend fun markReady(receipt: AnalyzedReceipt, raw: RawReceiptAnalysis): Outcome<Unit>
 
     suspend fun delete(receiptId: String): Outcome<Unit>
 
+    /**
+     * Finalizuje paragon: utrwala końcowe kategorie [items] w `receipt_items` (po edycji w review)
+     * i podpina paragon pod transakcję (status `saved`).
+     */
     suspend fun finalize(
         receiptId: String,
         transactionId: String,
-        splits: List<Pair<String, Money>>,
+        items: List<AnalyzedItem>,
     ): Outcome<Unit>
 }
 

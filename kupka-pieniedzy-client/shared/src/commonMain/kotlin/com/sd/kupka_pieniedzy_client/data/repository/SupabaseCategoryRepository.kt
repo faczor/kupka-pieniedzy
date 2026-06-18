@@ -178,14 +178,17 @@ class SupabaseCategoryRepository(
                         }
                     }
                     .decodeList<IdRow>()
-            val splits =
+            val receiptItems =
                 supabase.postgrest
-                    .from("receipt_category_splits")
+                    .from("receipt_items")
                     .select(Columns.list("id")) {
-                        filter { eq("category_id", categoryId) }
+                        filter {
+                            eq("user_id", config.userId)
+                            eq("category_id", categoryId)
+                        }
                     }
                     .decodeList<IdRow>()
-            tx.size + splits.size
+            tx.size + receiptItems.size
         }
 
     override suspend fun deactivate(categoryId: String, moveEntriesToId: String?): Outcome<Unit> =
@@ -200,9 +203,12 @@ class SupabaseCategoryRepository(
                         }
                     }
                 supabase.postgrest
-                    .from("receipt_category_splits")
+                    .from("receipt_items")
                     .update(CategoryRefPatch(categoryId = moveEntriesToId)) {
-                        filter { eq("category_id", categoryId) }
+                        filter {
+                            eq("user_id", config.userId)
+                            eq("category_id", categoryId)
+                        }
                     }
             }
             supabase.postgrest

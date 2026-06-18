@@ -20,6 +20,8 @@ data class AnalyzeReceiptResponse(
     @SerialName("totalMinor") val totalMinor: Long,
     @SerialName("confidence") val confidence: Float,
     @SerialName("items") val items: List<AnalyzedItemDto> = emptyList(),
+    /** Surowy odczyt sprzed kategoryzacji — trafia do raw_ocr_json (audyt/analiza). */
+    @SerialName("raw") val raw: RawReadDto? = null,
 )
 
 @Serializable
@@ -27,6 +29,21 @@ data class AnalyzedItemDto(
     @SerialName("name") val name: String,
     @SerialName("amountMinor") val amountMinor: Long,
     @SerialName("suggestedCategory") val suggestedCategory: String? = null,
+)
+
+/** Surowy odczyt paragonu sprzed kategoryzacji (z `raw` w odpowiedzi funkcji). */
+@Serializable
+data class RawReadDto(
+    @SerialName("store") val store: String,
+    @SerialName("date") val date: String? = null,
+    @SerialName("printedTotalMinor") val printedTotalMinor: Long? = null,
+    @SerialName("lines") val lines: List<RawReadLineDto> = emptyList(),
+)
+
+@Serializable
+data class RawReadLineDto(
+    @SerialName("name") val name: String,
+    @SerialName("amountMinor") val amountMinor: Long,
 )
 
 /** Ciało błędu funkcji: { "error": { "code", "message" } }. */

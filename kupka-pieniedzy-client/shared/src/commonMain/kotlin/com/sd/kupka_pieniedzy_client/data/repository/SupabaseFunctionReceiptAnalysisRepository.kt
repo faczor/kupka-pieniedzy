@@ -12,6 +12,7 @@ import com.sd.kupka_pieniedzy_client.data.dto.FunctionError
 import com.sd.kupka_pieniedzy_client.data.supabase.DomainException
 import com.sd.kupka_pieniedzy_client.data.supabase.runCatchingDomain
 import com.sd.kupka_pieniedzy_client.domain.model.RawAnalyzedItem
+import com.sd.kupka_pieniedzy_client.domain.model.RawLine
 import com.sd.kupka_pieniedzy_client.domain.model.RawReceiptAnalysis
 import com.sd.kupka_pieniedzy_client.domain.repository.ReceiptAnalysisRepository
 import io.ktor.client.HttpClient
@@ -105,6 +106,12 @@ class SupabaseFunctionReceiptAnalysisRepository(
                         amount = Money(it.amountMinor, currency),
                         suggestedCategoryName = it.suggestedCategory,
                     )
+                },
+            date = raw?.date ?: date,
+            printedTotal = raw?.printedTotalMinor?.let { Money(it, currency) },
+            rawLines =
+                raw?.lines.orEmpty().map {
+                    RawLine(name = it.name, amount = Money(it.amountMinor, currency))
                 },
         )
 }

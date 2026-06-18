@@ -14,7 +14,7 @@ import kotlinx.datetime.LocalDate
 
 /**
  * Postęp budżetów. Czytamy z widoku `budget_progress` (kategoria + budżet + suma wydana z
- * transakcji ORAZ z receipt_category_splits, bez double-countingu — patrz migracja 0001).
+ * transakcji ORAZ z receipt_items, bez double-countingu — patrz migracja 0005).
  */
 class SupabaseBudgetRepository(
     private val supabase: SupabaseClientProvider,
