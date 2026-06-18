@@ -57,6 +57,27 @@ interface Strings {
 
     fun entryMeta(category: String, relativeDay: String): String
 
+    // --- Wpisy (lista wszystkich wydatków) ---
+    val entriesTitle: String
+    val sortNewest: String
+    val sortHighest: String
+    val filterAll: String
+
+    /** np. „23 wpisy · śr. 141 zł/dzień” lub (tryb filtra) „5 wpisów · śr. 75 zł/wpis”. */
+    fun entriesCountAndAvg(count: Int, avgFormatted: String, perEntry: Boolean): String
+
+    fun trendVsMonth(monthShort: String): String
+
+    fun ofBudgetCaption(budgetFormatted: String): String
+
+    fun receiptRowMeta(items: Int): String
+
+    val analyzingReceipt: String
+    val othersLabel: String
+    val emptyEntriesTitle: String
+    val emptyEntriesSubtitle: String
+    val emptyFilterSubtitle: String
+
     // --- Dodawanie wydatku ---
     val addModeManualTitle: String
     val addModeManualSubtitle: String

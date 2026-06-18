@@ -61,6 +61,26 @@ class SupabaseReceiptRepository(
                 .map { it.toDomain(config.defaultCurrency) }
         }
 
+    override suspend fun getSavedForMonth(
+        start: kotlinx.datetime.LocalDate,
+        end: kotlinx.datetime.LocalDate,
+    ): Outcome<List<Receipt>> =
+        runCatchingDomain(supabase.isConfigured) {
+            supabase.postgrest
+                .from("receipts")
+                .select {
+                    filter {
+                        eq("user_id", config.userId)
+                        eq("status", "saved")
+                        gte("date", start.toString())
+                        lte("date", end.toString())
+                    }
+                    order("date", Order.DESCENDING)
+                }
+                .decodeList<ReceiptDto>()
+                .map { it.toDomain(config.defaultCurrency) }
+        }
+
     override suspend fun getReadyOne(): Outcome<Receipt?> =
         runCatchingDomain(supabase.isConfigured) {
             supabase.postgrest

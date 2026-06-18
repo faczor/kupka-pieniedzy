@@ -6,6 +6,7 @@ import com.sd.kupka_pieniedzy_client.designsystem.icon.AppIcons
 import com.sd.kupka_pieniedzy_client.feature.addexpense.ManualExpenseScreen
 import com.sd.kupka_pieniedzy_client.feature.categories.CategoriesScreen
 import com.sd.kupka_pieniedzy_client.feature.dashboard.DashboardScreen
+import com.sd.kupka_pieniedzy_client.feature.entries.EntriesScreen
 import com.sd.kupka_pieniedzy_client.feature.placeholder.PlaceholderScreen
 import com.sd.kupka_pieniedzy_client.feature.receipt.ReceiptScreen
 import com.sd.kupka_pieniedzy_client.localization.LocalStrings
@@ -20,8 +21,7 @@ fun AppNavHost() {
         when (route) {
             Route.Dashboard -> DashboardScreen()
             Route.Categories -> CategoriesScreen()
-            Route.Entries ->
-                PlaceholderScreen(strings.navEntries, AppIcons.ReceiptLong, selectedTab = 1)
+            Route.Entries -> EntriesScreen()
             Route.Search -> PlaceholderScreen(strings.navSearch, AppIcons.Search, selectedTab = 3)
             Route.AddManualExpense -> ManualExpenseScreen()
             is Route.Receipt -> ReceiptScreen(route.receiptId)

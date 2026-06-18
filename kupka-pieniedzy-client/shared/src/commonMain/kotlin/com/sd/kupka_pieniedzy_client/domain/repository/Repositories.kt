@@ -40,6 +40,9 @@ interface CategoryRepository {
 interface TransactionRepository {
     suspend fun getRecent(limit: Int): Outcome<List<RecentEntry>>
 
+    /** Wszystkie nie-transferowe wpisy miesiąca (widok `recent_entries`), malejąco po dacie. */
+    suspend fun getForMonth(start: LocalDate, end: LocalDate): Outcome<List<RecentEntry>>
+
     suspend fun getMonthExpenseTotal(start: LocalDate, end: LocalDate): Outcome<Money>
 
     suspend fun insertManual(
@@ -70,6 +73,9 @@ interface ReceiptRepository {
     suspend fun createPending(store: String?, imagePath: String?): Outcome<String>
 
     suspend fun getActive(): Outcome<List<Receipt>>
+
+    /** Paragony zapisane (status `saved`) z datą w okresie — do mapowania transakcja→paragon na liście. */
+    suspend fun getSavedForMonth(start: LocalDate, end: LocalDate): Outcome<List<Receipt>>
 
     suspend fun getReadyOne(): Outcome<Receipt?>
 

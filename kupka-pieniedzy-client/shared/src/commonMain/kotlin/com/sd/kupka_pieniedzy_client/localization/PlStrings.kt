@@ -62,6 +62,32 @@ object PlStrings : Strings {
 
     override fun entryMeta(category: String, relativeDay: String) = "$category · $relativeDay"
 
+    override val entriesTitle = "Wpisy"
+    override val sortNewest = "Najnowsze"
+    override val sortHighest = "Najwyższe"
+    override val filterAll = "Wszystkie"
+
+    override fun entriesCountAndAvg(count: Int, avgFormatted: String, perEntry: Boolean): String {
+        val word = plChoosePlural(count, "wpis", "wpisy", "wpisów")
+        val unit = if (perEntry) "wpis" else "dzień"
+        return "$count $word · śr. $avgFormatted/$unit"
+    }
+
+    override fun trendVsMonth(monthShort: String) = "vs $monthShort"
+
+    override fun ofBudgetCaption(budgetFormatted: String) = "z $budgetFormatted"
+
+    override fun receiptRowMeta(items: Int): String {
+        val word = plChoosePlural(items, "pozycja", "pozycje", "pozycji")
+        return "Paragon · $items $word"
+    }
+
+    override val analyzingReceipt = "Analizuję paragon…"
+    override val othersLabel = "inne"
+    override val emptyEntriesTitle = "Brak wpisów"
+    override val emptyEntriesSubtitle = "W tym miesiącu nie ma jeszcze wydatków"
+    override val emptyFilterSubtitle = "Brak wpisów w tej kategorii w tym miesiącu"
+
     override val addModeManualTitle = "Ręcznie"
     override val addModeManualSubtitle = "Kwota, kategoria, opcjonalna nazwa"
     override val addModeReceiptTitle = "Zdjęcie paragonu"
