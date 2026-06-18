@@ -35,6 +35,7 @@ import com.sd.kupka_pieniedzy_client.designsystem.component.AppText
 import com.sd.kupka_pieniedzy_client.designsystem.component.AsyncBanner
 import com.sd.kupka_pieniedzy_client.designsystem.component.EntryAmount
 import com.sd.kupka_pieniedzy_client.designsystem.component.EntryRow
+import com.sd.kupka_pieniedzy_client.designsystem.component.ExpandableEntryRow
 import com.sd.kupka_pieniedzy_client.designsystem.component.IconTile
 import com.sd.kupka_pieniedzy_client.designsystem.component.KupkaListCard
 import com.sd.kupka_pieniedzy_client.designsystem.component.KupkaProgressBar
@@ -528,42 +529,26 @@ private fun ReceiptRow(
     showDivider: Boolean,
     onToggle: () -> Unit,
 ) {
-    val colors = KupkaTheme.colors
     val strings = LocalStrings.current
     val nav = LocalNavigator.current
     val categoryColor = parseHexColor(item.category.colorHex)
+    // Tylko paragon (z id) jest rozwijalny — zwykłe wpisy nie dostają chevrona.
+    val expandable = item.receiptId != null
 
-    Column(modifier = Modifier.fillMaxWidth()) {
-        EntryRow(
-            title = item.title,
-            meta = strings.receiptRowMeta(item.receiptItemCount ?: 0),
-            trailing = {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                ) {
-                    EntryAmount(item.amount, item.type)
-                    Box(
-                        modifier = Modifier.size(28.dp).clickable(onClick = onToggle),
-                        contentAlignment = Alignment.Center,
-                    ) {
-                        MaterialSymbol(
-                            if (expanded) AppIcons.ExpandLess else AppIcons.ExpandMore,
-                            size = 20.dp,
-                            tint = colors.onSurfaceLow,
-                        )
-                    }
-                }
-            },
-            leading = { ReceiptIconTile(item.category.icon, categoryColor) },
-            onClick = { item.receiptId?.let { nav.push(Route.Receipt(it)) } },
-            showDivider = showDivider && !expanded,
-            contentPadding = rowPadding,
-        )
-        if (expanded) {
-            ReceiptPositions(positions, onToggle)
-        }
-    }
+    ExpandableEntryRow(
+        title = item.title,
+        meta = strings.receiptRowMeta(item.receiptItemCount ?: 0),
+        amount = { EntryAmount(item.amount, item.type) },
+        expandable = expandable,
+        expanded = expanded,
+        onToggle = onToggle,
+        expandedContent = { ReceiptPositions(positions, onToggle) },
+        leading = { ReceiptIconTile(item.category.icon, categoryColor) },
+        onClick =
+            if (item.receiptId != null) ({ nav.push(Route.Receipt(item.receiptId)) }) else null,
+        showDivider = showDivider,
+        contentPadding = rowPadding,
+    )
 }
 
 @Composable
