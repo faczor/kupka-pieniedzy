@@ -19,14 +19,14 @@ data class Transaction(
 /** Pozycja listy „Ostatnie wpisy” (zdenormalizowana o kategorię do wyświetlenia). */
 data class RecentEntry(
     val id: String,
-    val title: String,
-    val category: CategoryRef,
-    val amount: Money,
-    val type: TransactionType,
+    override val title: String,
+    override val category: CategoryRef,
+    override val amount: Money,
+    override val type: TransactionType,
     val date: LocalDate,
-    val receiptItemCount: Int? = null,
+    override val receiptItemCount: Int? = null,
     val isNew: Boolean = false,
-)
+) : EntryRowData
 
 /** Dane wejściowe ręcznego dodania wydatku (formularz „Nowy wydatek”). */
 data class NewManualExpense(

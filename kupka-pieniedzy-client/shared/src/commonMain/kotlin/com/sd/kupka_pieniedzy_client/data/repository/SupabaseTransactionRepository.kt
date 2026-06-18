@@ -39,6 +39,23 @@ class SupabaseTransactionRepository(
                 .map { it.toDomain(config.defaultCurrency) }
         }
 
+    /** Wszystkie nie-transferowe wpisy miesiąca (widok `recent_entries`), malejąco po dacie. */
+    override suspend fun getForMonth(start: LocalDate, end: LocalDate): Outcome<List<RecentEntry>> =
+        runCatchingDomain(supabase.isConfigured) {
+            supabase.postgrest
+                .from("recent_entries")
+                .select {
+                    filter {
+                        eq("user_id", config.userId)
+                        gte("date", start.toString())
+                        lte("date", end.toString())
+                    }
+                    order("date", Order.DESCENDING)
+                }
+                .decodeList<RecentEntryDto>()
+                .map { it.toDomain(config.defaultCurrency) }
+        }
+
     /**
      * Suma wydatków miesiąca. Konwencja: `expense` dodaje, `refund` odejmuje (zwrot zmniejsza
      * realny wydatek). Transfery i income wykluczone.
