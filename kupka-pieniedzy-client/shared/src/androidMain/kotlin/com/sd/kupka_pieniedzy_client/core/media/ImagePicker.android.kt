@@ -24,7 +24,9 @@ actual fun rememberImagePicker(onResult: (PickedImage?) -> Unit): ImagePickerLau
                 currentOnResult.value(null)
                 return@rememberLauncherForActivityResult
             }
-            val bytes = context.contentResolver.openInputStream(uri)?.use { it.readBytes() }
+            val raw = context.contentResolver.openInputStream(uri)?.use { it.readBytes() }
+            // HEIC/duże zdjęcia -> JPEG ~1568 px (Claude vision nie przyjmuje HEIC).
+            val bytes = raw?.let { normalizeReceiptImageToJpeg(it) }
             currentOnResult.value(bytes?.let { PickedImage(path = uri.toString(), bytes = it) })
         }
 

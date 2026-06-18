@@ -67,8 +67,10 @@ private class PickerDelegate(private val onResult: (PickedImage?) -> Unit) :
         val identifier = result.assetIdentifier ?: "ios-photo"
         val typeId = provider.registeredTypeIdentifiers.firstOrNull() as? String ?: "public.image"
         provider.loadDataRepresentationForTypeIdentifier(typeId) { data, _ ->
-            val picked = data?.let { PickedImage(path = identifier, bytes = it.toByteArray()) }
-            // completionHandler woła z prywatnej kolejki — wracamy na main do zmiany stanu Compose.
+            // Na tej (prywatnej) kolejce transkodujemy HEIC/duże zdjęcia -> JPEG ~1568 px,
+            // bo Claude vision nie przyjmuje HEIC. Dopiero wynik wracamy na main.
+            val bytes = data?.toByteArray()?.let { normalizeReceiptImageToJpeg(it) }
+            val picked = bytes?.let { PickedImage(path = identifier, bytes = it) }
             dispatch_async(dispatch_get_main_queue()) { onResult(picked) }
         }
     }
