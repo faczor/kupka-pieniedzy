@@ -6,7 +6,7 @@ import androidx.compose.runtime.Composable
 data class PickedImage(
     /** Opaque referencja do pliku: content-Uri (Android) lub identyfikator zasobu (iOS). */
     val path: String,
-    /** Surowe bajty obrazu (JPEG) — pod realny upload do Supabase Storage / analizę. */
+    /** Bajty obrazu znormalizowane do JPEG (~1568 px) — pod upload do Storage / analizę. */
     val bytes: ByteArray,
 ) {
     // data class z ByteArray wymaga ręcznego equals/hashCode, by porównywać zawartość.

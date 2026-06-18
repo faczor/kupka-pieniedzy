@@ -11,12 +11,19 @@ obraz (Storage / base64)
    └─ Kategoryzacja ──► exact-match z pamięci (product_categories) → reszta: Claude (Haiku)
                         z few-shot z historii usera → fallback "inne"
    └─ Walidacja ──────► total = SUM(items); confidence z heurystyki
+   └─ Wynik ──────────► items[{nazwa, kwota, kategoria}] + raw (surowy odczyt sprzed kategoryzacji)
 ```
 
 Wszystko idzie przez Anthropic — **dwa calle do Haiku** (vision-ekstrakcja + kategoryzacja),
 bez zewnętrznego OCR. Funkcja jest **czysta** — liczy i **zwraca** wynik, **nie pisze** do
 tabeli `receipts`. Zapis (`markReady`) i mapowanie nazw kategorii → `category_id` robi klient.
 Funkcja czyta (service role): obraz ze Storage, kategorie usera i pamięć kategoryzacji z DB.
+
+Odpowiedź zawiera też blok **`raw`** — surowy odczyt sprzed kategoryzacji
+(`{ store, date, printedTotalMinor, lines[{name, amountMinor}] }`). Klient utrwala go w
+`receipts.raw_ocr_json` jako **wewnętrzny artefakt analityczny** (audyt), a ustrukturyzowane
+pozycje (nazwa + kwota + kategoria) zapisuje do tabeli **`receipt_items`** — to z niej czyta
+UI. Dzięki temu interfejs nie dotyka `raw_ocr_json`.
 
 > **Notka (przyszłe rozszerzenie):** wstępny **OCR on-device** (ML Kit na Androidzie,
 > Apple Vision na iOS, przez `expect`/`actual`) można dołożyć **przed** wysyłką do chmury —

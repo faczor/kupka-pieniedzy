@@ -57,6 +57,24 @@ export interface AnalyzedItem {
   suggestedCategory: string | null;
 }
 
+/** Linia surowego odczytu (sprzed kategoryzacji), kwota w groszach. */
+export interface RawReadLine {
+  name: string;
+  amountMinor: number;
+}
+
+/**
+ * Surowy odczyt paragonu sprzed kategoryzacji — artefakt analityczny.
+ * Klient zapisuje go do `receipts.raw_ocr_json` (audyt), ale UI go nie czyta.
+ */
+export interface RawRead {
+  store: string;
+  date: string | null;
+  /** Kwota „DO ZAPŁATY/SUMA” z paragonu (cross-check) w groszach. */
+  printedTotalMinor: number | null;
+  lines: RawReadLine[];
+}
+
 /** Odpowiedź funkcji — mapuje się 1:1 na domenowe RawReceiptAnalysis. */
 export interface ReceiptAnalysis {
   store: string;
@@ -66,4 +84,6 @@ export interface ReceiptAnalysis {
   totalMinor: number;
   confidence: number;
   items: AnalyzedItem[];
+  /** Surowy odczyt sprzed kategoryzacji (do raw_ocr_json, tylko audyt/analiza). */
+  raw: RawRead;
 }

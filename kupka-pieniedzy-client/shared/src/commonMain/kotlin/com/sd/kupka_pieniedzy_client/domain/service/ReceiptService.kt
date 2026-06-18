@@ -2,7 +2,6 @@ package com.sd.kupka_pieniedzy_client.domain.service
 
 import com.sd.kupka_pieniedzy_client.core.error.DomainError
 import com.sd.kupka_pieniedzy_client.core.error.ValidationRule
-import com.sd.kupka_pieniedzy_client.core.money.Money
 import com.sd.kupka_pieniedzy_client.core.result.Outcome
 import com.sd.kupka_pieniedzy_client.core.result.onSuccess
 import com.sd.kupka_pieniedzy_client.core.result.outcomeBinding
@@ -71,7 +70,7 @@ class DefaultReceiptService(
                     imagePath = null, // MVP: zdjęcie idzie do funkcji jako base64, nie do Storage
                     items = items,
                 )
-            receiptRepository.markReady(analyzed).bind()
+            receiptRepository.markReady(analyzed, raw).bind()
             changeNotifier.notifyTransactionsChanged()
         }
 
@@ -103,16 +102,9 @@ class DefaultReceiptService(
                 )
                 .bind()
 
-        val splits: List<Pair<String, Money>> =
-            draft.items
-                .groupBy { it.categoryId!! }
-                .map { (categoryId, list) ->
-                    val sum =
-                        list.fold(Money(0, draft.total.currency)) { acc, item -> acc + item.amount }
-                    categoryId to sum
-                }
-
-        receiptRepository.finalize(draft.receiptId, transactionId, splits).bind()
+        // Końcowe kategorie pozycji utrwala finalize w receipt_items; per-kategorię sumy
+        // wyliczają widoki (budget_progress) bezpośrednio z receipt_items — bez tabeli splitów.
+        receiptRepository.finalize(draft.receiptId, transactionId, draft.items).bind()
         changeNotifier.notifyTransactionsChanged()
     }
 

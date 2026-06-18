@@ -30,6 +30,15 @@ export function assemble(
     totalMinor,
     confidence: confidence(printedMinor, totalMinor, items),
     items,
+    raw: {
+      store: receipt.store,
+      date: receipt.date,
+      printedTotalMinor: printedMinor,
+      lines: receipt.lines.map((l) => ({
+        name: l.name,
+        amountMinor: Math.round(l.amount * 100),
+      })),
+    },
   };
 }
 
