@@ -4,9 +4,12 @@ import com.sd.kupka_pieniedzy_client.core.money.Money
 import com.sd.kupka_pieniedzy_client.core.result.Outcome
 import com.sd.kupka_pieniedzy_client.domain.model.AnalyzedItem
 import com.sd.kupka_pieniedzy_client.domain.model.AnalyzedReceipt
+import com.sd.kupka_pieniedzy_client.domain.model.BudgetHistory
 import com.sd.kupka_pieniedzy_client.domain.model.BudgetProgress
 import com.sd.kupka_pieniedzy_client.domain.model.Category
 import com.sd.kupka_pieniedzy_client.domain.model.EditCategory
+import com.sd.kupka_pieniedzy_client.domain.model.InProgressMonth
+import com.sd.kupka_pieniedzy_client.domain.model.MonthTotal
 import com.sd.kupka_pieniedzy_client.domain.model.NewCategory
 import com.sd.kupka_pieniedzy_client.domain.model.NewManualExpense
 import com.sd.kupka_pieniedzy_client.domain.model.RawReceiptAnalysis
@@ -105,4 +108,15 @@ interface ReceiptRepository {
 interface ReceiptAnalysisRepository {
     /** Analiza zdjęcia paragonu (bajty JPEG/PNG) — Edge Function (Haiku vision + kategoryzacja). */
     suspend fun analyze(image: ByteArray): Outcome<RawReceiptAnalysis>
+}
+
+interface TrendsRepository {
+    /** Sumy wydatków per miesiąc dla ostatnich [window] miesięcy, chronologicznie. */
+    suspend fun getMonthlyTotals(window: Int): Outcome<List<MonthTotal>>
+
+    /** Historia per budżet (kategorie z budżetem i bez), ostatnie [window] miesięcy, chronologicznie. */
+    suspend fun getBudgetHistories(window: Int): Outcome<List<BudgetHistory>>
+
+    /** Bieżący (niedomknięty) miesiąc — wydatki do dziś. null, gdy brak danych w tym miesiącu. */
+    suspend fun getInProgressMonth(): Outcome<InProgressMonth?>
 }

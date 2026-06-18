@@ -234,6 +234,68 @@ object PlStrings : Strings {
     override val receiptReanalyzeErrorTitle = "Nie udało się przeanalizować ponownie"
     override val receiptAnalysisErrorTitle = "Nie udało się przeanalizować paragonu"
 
+    // --- Trendy ---
+    override val trendsEntryTitle = "Zobacz trendy"
+    override val trendsEntrySubtitle = "Co rośnie, co maleje · w czasie"
+    override val trendsTitle = "Trendy"
+
+    override fun trendsWindowLabel(months: Int) = "ostatnie $months mies."
+
+    override val trendsAverageMonthly = "Średnio na miesiąc"
+
+    override fun trendsComparison(recentMonth: Int, previousMonth: Int) =
+        "${monthName(recentMonth).lowercase()} vs ${monthName(previousMonth).lowercase()}"
+
+    override fun trendsInProgress(month: Int, amountFormatted: String, day: Int) =
+        "${monthName(month).lowercase()} w toku · $amountFormatted na $day. dzień"
+
+    override val trendsPerBudget = "Trend per budżet"
+
+    override fun trendsVsAvgShort(months: Int) = "vs śr. $months mies."
+
+    override fun trendsAvgValue(amountFormatted: String) = "śr. $amountFormatted"
+
+    override val trendsCorrectionChip = "korekta"
+    override val trendsThisMonth = "Ten miesiąc"
+
+    override fun trendsVsAverageFull(months: Int, avgFormatted: String) =
+        "vs średnia $months mies. ($avgFormatted)"
+
+    override fun trendsRisingSince(month: Int) = "rośnie od ${monthGenitive(month)}"
+
+    override val trendsMonthByMonth = "Miesiąc po miesiącu"
+
+    override fun trendsLimitLegend(limitFormatted: String) = "limit $limitFormatted"
+
+    override fun trendsOverLimitTitle(times: Int, window: Int) =
+        "przekroczony $times z $window miesięcy"
+
+    override val trendsUnderLimitTitle = "poniżej limitu — stały zapas"
+
+    override fun trendsRaiseSuggestion(
+        limitFormatted: String,
+        avgFormatted: String,
+        suggestedFormatted: String,
+    ) =
+        "Limit $limitFormatted jest za niski — realnie wydajesz śr. $avgFormatted. " +
+            "Podnieś do $suggestedFormatted."
+
+    override fun trendsLowerSuggestion(
+        avgFormatted: String,
+        limitFormatted: String,
+        suggestedFormatted: String,
+    ) =
+        "Masz stały zapas — realnie wydajesz śr. $avgFormatted przy limicie $limitFormatted. " +
+            "Obniż do $suggestedFormatted i przesuń różnicę gdzie indziej."
+
+    override fun trendsSetLimit(suggestedFormatted: String) = "Ustaw $suggestedFormatted"
+
+    override val trendsKeepLimit = "Zostaw"
+    override val trendsNoBudgetHint =
+        "Bez budżetu — ustaw limit dla tej kategorii, by dostawać sugestie korekt."
+    override val emptyTrendsTitle = "Za mało danych"
+    override val emptyTrendsSubtitle = "Trendy pojawią się po kilku miesiącach wpisów"
+
     override fun monthName(month: Int): String =
         when (month) {
             1 -> "Styczeń"
@@ -265,6 +327,23 @@ object PlStrings : Strings {
             10 -> "paź"
             11 -> "lis"
             12 -> "gru"
+            else -> ""
+        }
+
+    override fun monthGenitive(month: Int): String =
+        when (month) {
+            1 -> "stycznia"
+            2 -> "lutego"
+            3 -> "marca"
+            4 -> "kwietnia"
+            5 -> "maja"
+            6 -> "czerwca"
+            7 -> "lipca"
+            8 -> "sierpnia"
+            9 -> "września"
+            10 -> "października"
+            11 -> "listopada"
+            12 -> "grudnia"
             else -> ""
         }
 

@@ -9,6 +9,8 @@ import com.sd.kupka_pieniedzy_client.feature.dashboard.DashboardScreen
 import com.sd.kupka_pieniedzy_client.feature.entries.EntriesScreen
 import com.sd.kupka_pieniedzy_client.feature.placeholder.PlaceholderScreen
 import com.sd.kupka_pieniedzy_client.feature.receipt.ReceiptScreen
+import com.sd.kupka_pieniedzy_client.feature.trends.TrendsBudgetDetailScreen
+import com.sd.kupka_pieniedzy_client.feature.trends.TrendsScreen
 import com.sd.kupka_pieniedzy_client.localization.LocalStrings
 
 /** Renderuje bieżący [Route] ze stosu [Navigator]. */
@@ -25,6 +27,8 @@ fun AppNavHost() {
             Route.Search -> PlaceholderScreen(strings.navSearch, AppIcons.Search, selectedTab = 3)
             Route.AddManualExpense -> ManualExpenseScreen()
             is Route.Receipt -> ReceiptScreen(route.receiptId)
+            Route.Trends -> TrendsScreen()
+            is Route.TrendsBudgetDetail -> TrendsBudgetDetailScreen(route.categoryId)
         }
     }
 }
