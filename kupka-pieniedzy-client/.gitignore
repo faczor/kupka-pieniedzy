@@ -22,3 +22,11 @@ node_modules/
 
 # Lokalny config z sekretami (URL + anon key). Commitujemy tylko *.example.json.
 shared/src/commonMain/composeResources/files/app_config.json
+
+# iOS signing — sekrety, NIGDY do repo (klucz API ASC, certy, profile)
+*.p8
+*.p12
+*.mobileprovision
+*.cer
+*.certSigningRequest
+scripts/ios/*.key
