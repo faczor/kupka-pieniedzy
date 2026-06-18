@@ -3,6 +3,9 @@ package com.sd.kupka_pieniedzy_client.feature.addexpense
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.sd.kupka_pieniedzy_client.core.error.DomainError
+import com.sd.kupka_pieniedzy_client.core.logging.AppLog
+import com.sd.kupka_pieniedzy_client.core.logging.action
+import com.sd.kupka_pieniedzy_client.core.logging.failure
 import com.sd.kupka_pieniedzy_client.core.money.Money
 import com.sd.kupka_pieniedzy_client.core.presentation.ToastController
 import com.sd.kupka_pieniedzy_client.core.presentation.ToastMessage
@@ -51,6 +54,7 @@ class ManualExpenseViewModel(
     }
 
     fun loadCategories() {
+        AppLog.action("ManualExpense.loadCategories")
         _state.update { it.copy(categoriesLoading = true, loadError = null) }
         viewModelScope.launch {
             categoryService
@@ -65,6 +69,7 @@ class ManualExpenseViewModel(
                         }
                     },
                     onFailure = { e ->
+                        AppLog.failure("ManualExpense.loadCategories", e)
                         _state.update { it.copy(categoriesLoading = false, loadError = e) }
                     },
                 )
@@ -84,6 +89,10 @@ class ManualExpenseViewModel(
         val current = _state.value
         if (!current.canSave) return
         val amount = Money.ofMajor(current.amountMajor!!)
+        AppLog.action(
+            "ManualExpense.save",
+            "amountMinor=${amount.minorUnits} categoryId=${current.selectedCategoryId} date=${current.date}",
+        )
         _state.update { it.copy(saving = true, saveError = null) }
         viewModelScope.launch {
             expenseService
@@ -100,6 +109,7 @@ class ManualExpenseViewModel(
                         toast.show(ToastMessage.ExpenseSaved)
                     },
                     onFailure = { e ->
+                        AppLog.failure("ManualExpense.save", e)
                         _state.update { it.copy(saving = false, saveError = e) }
                         toast.show(ToastMessage.ExpenseSaveFailed) { save(onSaved) }
                     },

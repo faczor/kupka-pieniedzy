@@ -2,6 +2,8 @@ package com.sd.kupka_pieniedzy_client.data.repository
 
 import com.sd.kupka_pieniedzy_client.core.config.AppConfig
 import com.sd.kupka_pieniedzy_client.core.error.DomainError
+import com.sd.kupka_pieniedzy_client.core.logging.AppLog
+import com.sd.kupka_pieniedzy_client.core.logging.action
 import com.sd.kupka_pieniedzy_client.core.money.Money
 import com.sd.kupka_pieniedzy_client.core.result.Outcome
 import com.sd.kupka_pieniedzy_client.data.dto.AnalyzeReceiptRequest
@@ -49,6 +51,10 @@ class SupabaseFunctionReceiptAnalysisRepository(
     @OptIn(ExperimentalEncodingApi::class)
     override suspend fun analyze(image: ByteArray): Outcome<RawReceiptAnalysis> =
         runCatchingDomain(config.isSupabaseConfigured) {
+            AppLog.action(
+                "ReceiptAnalysis.analyze",
+                "imageBytes=${image.size} userId=${config.userId} -> $endpoint",
+            )
             val request =
                 AnalyzeReceiptRequest(
                     imageBase64 = Base64.encode(image),
@@ -67,13 +73,20 @@ class SupabaseFunctionReceiptAnalysisRepository(
             val text = response.bodyAsText()
             if (!response.status.isSuccess()) throw functionError(response.status.value, text)
 
+            AppLog.action("ReceiptAnalysis.analyze", "OK status=${response.status.value}")
             json.decodeFromString(AnalyzeReceiptResponse.serializer(), text).toDomain()
         }
 
+    /**
+     * Mapuje błędną odpowiedź Edge Function na [DomainException]. Loguje pełną treść z serwera —
+     * inaczej `runCatchingDomain` widzi już tylko zmapowany [DomainError] i prawdziwa przyczyna
+     * (np. `analysis_failed: ...`) ginie.
+     */
     private fun functionError(status: Int, body: String): DomainException {
         val message =
             runCatching { json.decodeFromString(FunctionError.serializer(), body).error.message }
                 .getOrNull()
+        AppLog.w("ReceiptAnalysis.analyze FAILED -> HTTP $status, server=${message ?: body.take(500)}")
         val error =
             if (status >= 500) DomainError.Server(status)
             else DomainError.Unknown(cause = message ?: "Edge function HTTP $status")

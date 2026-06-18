@@ -3,6 +3,9 @@ package com.sd.kupka_pieniedzy_client.feature.addexpense
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.sd.kupka_pieniedzy_client.core.error.DomainError
+import com.sd.kupka_pieniedzy_client.core.logging.AppLog
+import com.sd.kupka_pieniedzy_client.core.logging.action
+import com.sd.kupka_pieniedzy_client.core.logging.failure
 import com.sd.kupka_pieniedzy_client.core.presentation.ToastController
 import com.sd.kupka_pieniedzy_client.core.presentation.ToastMessage
 import com.sd.kupka_pieniedzy_client.core.result.fold
@@ -36,6 +39,7 @@ class AddExpenseViewModel(
     fun startReceiptAnalysis(image: ByteArray, onStarted: () -> Unit, onCompleted: () -> Unit) {
         if (_starting.value) return
         _starting.value = true
+        AppLog.action("AddExpense.startReceiptAnalysis", "imageBytes=${image.size}")
         viewModelScope.launch {
             receiptService
                 .createPendingReceipt(imagePath = null)
@@ -44,12 +48,14 @@ class AddExpenseViewModel(
                         _starting.value = false
                         onStarted()
                         receiptService.runAnalysis(id, image).onFailure {
+                            AppLog.failure("AddExpense.runAnalysis", it)
                             _error.value = it
                             toast.show(ToastMessage.ReceiptAnalysisFailed)
                         }
                         onCompleted()
                     },
                     onFailure = {
+                        AppLog.failure("AddExpense.createPendingReceipt", it)
                         _starting.value = false
                         _error.value = it
                         toast.show(ToastMessage.ReceiptAnalysisFailed)

@@ -3,6 +3,7 @@
 import Anthropic from "npm:@anthropic-ai/sdk@0.39.0";
 import { parseJson } from "./prompt.ts";
 import { analysisFailed, internal } from "../errors.ts";
+import { log } from "../log.ts";
 
 const JSON_ONLY_SYSTEM =
   "You are a precise extraction engine. Respond with a single JSON object only — " +
@@ -52,6 +53,7 @@ export async function askForJson(
     });
     return parseJson(firstText(message));
   } catch (e) {
+    log.error(`Claude call failed (model=${model})`, e);
     throw analysisFailed((e as Error).message);
   }
 }
