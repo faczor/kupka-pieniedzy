@@ -24,6 +24,12 @@ sealed interface Route {
     data object AddManualExpense : Route
 
     data class Receipt(val receiptId: String) : Route
+
+    /** Trendy — wejście kontekstowe z Dashboardu (pushowane, nie zakładka). */
+    data object Trends : Route
+
+    /** Szczegół trendu pojedynczego budżetu (drill-in z Przeglądu Trendów). */
+    data class TrendsBudgetDetail(val categoryId: String) : Route
 }
 
 /** Kolejność zakładek w dolnym pasku (Home · Wpisy · Budżety · Szukaj). */

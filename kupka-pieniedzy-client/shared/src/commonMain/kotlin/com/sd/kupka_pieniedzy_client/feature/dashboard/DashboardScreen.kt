@@ -1,6 +1,7 @@
 package com.sd.kupka_pieniedzy_client.feature.dashboard
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -33,6 +34,7 @@ import com.sd.kupka_pieniedzy_client.designsystem.component.BudgetRow
 import com.sd.kupka_pieniedzy_client.designsystem.component.KupkaBottomSheet
 import com.sd.kupka_pieniedzy_client.designsystem.component.KupkaCard
 import com.sd.kupka_pieniedzy_client.designsystem.component.KupkaListCard
+import com.sd.kupka_pieniedzy_client.designsystem.component.IconTile
 import com.sd.kupka_pieniedzy_client.designsystem.component.KupkaProgressBar
 import com.sd.kupka_pieniedzy_client.designsystem.component.PrimaryButton
 import com.sd.kupka_pieniedzy_client.designsystem.component.ReadyToast
@@ -90,6 +92,7 @@ fun DashboardScreen() {
                     },
                     onSeeAllBudgets = { nav.selectTab(Route.Categories) },
                     onSeeAllEntries = { nav.selectTab(Route.Entries) },
+                    onSeeTrends = { nav.push(Route.Trends) },
                 )
             }
             if (state is ScreenState.Content) {
@@ -139,6 +142,7 @@ private fun DashboardContent(
     onOpenProcessing: () -> Unit,
     onSeeAllBudgets: () -> Unit,
     onSeeAllEntries: () -> Unit,
+    onSeeTrends: () -> Unit,
 ) {
     val colors = KupkaTheme.colors
     val strings = LocalStrings.current
@@ -197,6 +201,40 @@ private fun DashboardContent(
             height = 6.dp,
             modifier = Modifier.padding(top = 12.dp),
         )
+
+        // Wejście kontekstowe do Trendów (przy hero, nie zakładka — D24).
+        Row(
+            modifier =
+                Modifier.fillMaxWidth()
+                    .padding(top = 18.dp)
+                    .clip(KupkaTheme.shapes.cardShape)
+                    .background(colors.surfaceCard)
+                    .clickable(onClick = onSeeTrends)
+                    .padding(horizontal = 14.dp, vertical = 12.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+        ) {
+            IconTile(
+                icon = AppIcons.TrendingUp,
+                color = colors.primary,
+                tileSize = 38.dp,
+                iconSize = 20.dp,
+            )
+            Column(modifier = Modifier.weight(1f)) {
+                AppText(
+                    strings.trendsEntryTitle,
+                    variant = TextVariant.Body,
+                    color = colors.onSurfaceHigh,
+                )
+                AppText(
+                    strings.trendsEntrySubtitle,
+                    variant = TextVariant.Caption,
+                    color = colors.onSurfaceLow,
+                    modifier = Modifier.padding(top = 2.dp),
+                )
+            }
+            MaterialSymbol(AppIcons.ChevronRight, size = 20.dp, tint = colors.onSurfaceLow)
+        }
 
         if (snapshot.processingReceiptsCount > 0) {
             AsyncBanner(

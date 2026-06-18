@@ -8,6 +8,7 @@ import com.sd.kupka_pieniedzy_client.data.repository.SupabaseCategoryRepository
 import com.sd.kupka_pieniedzy_client.data.repository.SupabaseFunctionReceiptAnalysisRepository
 import com.sd.kupka_pieniedzy_client.data.repository.SupabaseReceiptRepository
 import com.sd.kupka_pieniedzy_client.data.repository.SupabaseTransactionRepository
+import com.sd.kupka_pieniedzy_client.data.repository.SupabaseTrendsRepository
 import com.sd.kupka_pieniedzy_client.data.supabase.SupabaseClientProvider
 import io.ktor.client.HttpClient
 import com.sd.kupka_pieniedzy_client.domain.repository.AccountRepository
@@ -16,6 +17,7 @@ import com.sd.kupka_pieniedzy_client.domain.repository.CategoryRepository
 import com.sd.kupka_pieniedzy_client.domain.repository.ReceiptAnalysisRepository
 import com.sd.kupka_pieniedzy_client.domain.repository.ReceiptRepository
 import com.sd.kupka_pieniedzy_client.domain.repository.TransactionRepository
+import com.sd.kupka_pieniedzy_client.domain.repository.TrendsRepository
 import org.koin.dsl.module
 
 /**
@@ -46,6 +48,11 @@ val dataModule = module {
     }
     single<BudgetRepository> { SupabaseBudgetRepository(supabase = get(), config = get()) }
     single<ReceiptRepository> { SupabaseReceiptRepository(supabase = get(), config = get()) }
+
+    // Trendy — realne dane z widoków `month_total_spend` / `category_month_spend` (migracja 0006).
+    single<TrendsRepository> {
+        SupabaseTrendsRepository(supabase = get(), config = get(), dateProvider = get<DateProvider>())
+    }
 
     single<ReceiptAnalysisRepository> {
         SupabaseFunctionReceiptAnalysisRepository(config = get(), httpClient = get())

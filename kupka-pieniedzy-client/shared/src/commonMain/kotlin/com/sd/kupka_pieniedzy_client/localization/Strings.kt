@@ -194,11 +194,67 @@ interface Strings {
     val receiptReanalyzeErrorTitle: String
     val receiptAnalysisErrorTitle: String
 
+    // --- Trendy (wgląd w czasie, wejście z Dashboardu) ---
+    val trendsEntryTitle: String
+    val trendsEntrySubtitle: String
+    val trendsTitle: String
+
+    fun trendsWindowLabel(months: Int): String
+
+    val trendsAverageMonthly: String
+
+    fun trendsComparison(recentMonth: Int, previousMonth: Int): String
+
+    fun trendsInProgress(month: Int, amountFormatted: String, day: Int): String
+
+    val trendsPerBudget: String
+
+    fun trendsVsAvgShort(months: Int): String
+
+    fun trendsAvgValue(amountFormatted: String): String
+
+    val trendsCorrectionChip: String
+    val trendsThisMonth: String
+
+    fun trendsVsAverageFull(months: Int, avgFormatted: String): String
+
+    fun trendsRisingSince(month: Int): String
+
+    val trendsMonthByMonth: String
+
+    fun trendsLimitLegend(limitFormatted: String): String
+
+    fun trendsOverLimitTitle(times: Int, window: Int): String
+
+    val trendsUnderLimitTitle: String
+
+    fun trendsRaiseSuggestion(
+        limitFormatted: String,
+        avgFormatted: String,
+        suggestedFormatted: String,
+    ): String
+
+    fun trendsLowerSuggestion(
+        avgFormatted: String,
+        limitFormatted: String,
+        suggestedFormatted: String,
+    ): String
+
+    fun trendsSetLimit(suggestedFormatted: String): String
+
+    val trendsKeepLimit: String
+    val trendsNoBudgetHint: String
+    val emptyTrendsTitle: String
+    val emptyTrendsSubtitle: String
+
     // --- Miesiące (mianownik, np. "Czerwiec") ---
     fun monthName(month: Int): String
 
     /** Skrót miesiąca do dat typu „16 cze”. */
     fun monthShort(month: Int): String
+
+    /** Dopełniacz miesiąca do fraz typu „od marca”, „rośnie od kwietnia”. */
+    fun monthGenitive(month: Int): String
 
     // --- Błędy ---
     fun errorMessage(error: DomainError): String
