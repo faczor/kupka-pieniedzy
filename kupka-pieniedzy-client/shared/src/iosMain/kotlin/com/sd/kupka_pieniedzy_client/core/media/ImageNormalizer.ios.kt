@@ -7,6 +7,8 @@ import kotlinx.cinterop.usePinned
 import platform.CoreGraphics.CGRectMake
 import platform.CoreGraphics.CGSizeMake
 import platform.Foundation.NSData
+import platform.Foundation.NSMutableData
+import platform.Foundation.appendBytes
 import platform.UIKit.UIGraphicsBeginImageContextWithOptions
 import platform.UIKit.UIGraphicsEndImageContext
 import platform.UIKit.UIGraphicsGetImageFromCurrentImageContext
@@ -26,8 +28,8 @@ internal actual fun normalizeReceiptImageToJpeg(
     quality: Int,
 ): ByteArray {
     if (bytes.isEmpty()) return bytes
-    val data =
-        bytes.usePinned { NSData.create(bytes = it.addressOf(0), length = bytes.size.toULong()) }
+    val data = NSMutableData()
+    bytes.usePinned { data.appendBytes(it.addressOf(0), bytes.size.toULong()) }
     val image = UIImage.imageWithData(data) ?: return bytes
 
     val (w, h) = image.size.useContents { width to height }

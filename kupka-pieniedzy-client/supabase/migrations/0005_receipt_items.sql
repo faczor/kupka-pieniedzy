@@ -58,9 +58,13 @@ from transactions t
 join categories c on c.id = t.category_id
 where t.type <> 'transfer';
 
--- budget_progress: wydane = transakcje (expense - refund) + pozycje paragonów
--- na (sub)kategorii RÓŻNEJ niż kategoria L1 transakcji paragonu (zwykle spożywka),
--- by nie dublować L1 liczonej już sumą transakcji (= receipt.total).
+-- budget_progress: wydane = transakcje (expense - refund) BEZ paragonów rozbitych na pozycje
+-- + pozycje paragonów (każda na SWOJEJ (sub)kategorii).
+--
+-- Model bez double-countingu (D28): paragon rozbity na pozycje liczy się do budżetów WYŁĄCZNIE
+-- przez `receipt_items` (per pozycja), a jego transakcja jest WYKLUCZONA ze spent_tx. Kategoria L1
+-- transakcji (zwykle spożywka) służy tylko do prezentacji w feedzie — NIE do budżetu. Dzięki temu
+-- 30 zł chemii z paragonu spożywczego liczy się w budżecie „chemia", a NIE podwójnie (chemia + L1).
 create or replace view budget_progress as
 with month as (
   select date_trunc('month', current_date)::date as m_start,
@@ -78,19 +82,25 @@ spent_tx as (
   from transactions t, month m
   where t.type in ('expense','refund')
     and t.date between m.m_start and m.m_end
+    -- Transakcje paragonów rozbitych na pozycje liczymy przez receipt_items (niżej), nie tu —
+    -- inaczej pełna suma paragonu dublowałaby się z sub-kategoriami.
+    and not exists (
+      select 1 from receipts r
+      join receipt_items ri on ri.receipt_id = r.id
+      where r.transaction_id = t.id
+    )
   group by t.user_id, t.category_id
 ),
 spent_items as (
-  -- Tylko zapisane paragony (transaction_id not null); L1 paragonu pomijamy
-  -- (liczona przez sumę transakcji), więc bierzemy pozycje o innej kategorii.
+  -- Wszystkie pozycje zapisanych paragonów (transaction_id not null), każda na swojej kategorii.
+  -- Datę bierzemy z TRANSAKCJI (spójnie z wykluczeniem powyżej — ten sam miesiąc).
   select r.user_id, ri.category_id, sum(ri.amount) as spent
   from receipt_items ri
   join receipts r on r.id = ri.receipt_id
   join transactions tr on tr.id = r.transaction_id
   cross join month m
   where ri.category_id is not null
-    and ri.category_id <> tr.category_id
-    and coalesce(r.date, current_date) between m.m_start and m.m_end
+    and tr.date between m.m_start and m.m_end
   group by r.user_id, ri.category_id
 )
 select
