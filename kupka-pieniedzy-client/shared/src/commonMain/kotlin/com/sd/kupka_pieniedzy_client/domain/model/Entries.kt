@@ -76,14 +76,14 @@ data class EntryDayGroup(
 /** Pojedynczy wiersz listy. [kind] decyduje o renderze (zwykły / paragon / w analizie). */
 data class EntryListItem(
     val id: String,
-    val title: String,
-    val category: CategoryRef,
-    val amount: Money,
-    val type: TransactionType,
+    override val title: String,
+    override val category: CategoryRef,
+    override val amount: Money,
+    override val type: TransactionType,
     val kind: EntryKind,
     val receiptId: String?,
-    val receiptItemCount: Int?,
-)
+    override val receiptItemCount: Int?,
+) : EntryRowData
 
 enum class EntryKind {
     Standard,

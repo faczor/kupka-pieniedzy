@@ -26,7 +26,6 @@ import com.sd.kupka_pieniedzy_client.designsystem.theme.parseHexColor
 import com.sd.kupka_pieniedzy_client.domain.model.BudgetProgress
 import com.sd.kupka_pieniedzy_client.domain.model.BudgetStatus
 import com.sd.kupka_pieniedzy_client.domain.model.RecentEntry
-import com.sd.kupka_pieniedzy_client.domain.model.TransactionType
 import com.sd.kupka_pieniedzy_client.localization.LocalStrings
 
 /** Wiersz budżetu: ikona kategorii barwiona statusem + kwoty + pasek postępu. */
@@ -70,15 +69,11 @@ fun BudgetRow(progress: BudgetProgress, modifier: Modifier = Modifier) {
     }
 }
 
-/** Wiersz „ostatniego wpisu”: tytuł + badge kategorii w meta + kwota. */
+/** Wiersz „ostatniego wpisu”: tytuł + badge kategorii w meta + kwota. Render przez [EntryRow]. */
 @Composable
 fun TransactionRow(entry: RecentEntry, modifier: Modifier = Modifier, showDivider: Boolean = true) {
-    val colors = KupkaTheme.colors
     val strings = LocalStrings.current
     val today = LocalToday.current
-    val categoryColor = parseHexColor(entry.category.colorHex)
-    val isPositive = entry.type == TransactionType.Refund || entry.type == TransactionType.Income
-    val amountColor = if (isPositive) colors.budgetGreenFill else colors.onSurfaceHigh
     val dayLabel = relativeDayLabel(entry.date, today, strings)
     val meta =
         if (entry.receiptItemCount != null) {
@@ -86,46 +81,17 @@ fun TransactionRow(entry: RecentEntry, modifier: Modifier = Modifier, showDivide
         } else {
             strings.entryMeta(entry.category.name, dayLabel)
         }
-
-    Row(
-        modifier =
-            modifier
-                .fillMaxWidth()
-                .then(
-                    if (entry.isNew) Modifier.background(colors.primary.copy(alpha = 0.06f))
-                    else Modifier
-                )
-                .then(
-                    if (showDivider) Modifier.bottomDivider(colors.divider.copy(alpha = 0.6f))
-                    else Modifier
-                )
-                .padding(horizontal = 16.dp, vertical = 13.dp),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(7.dp),
-            ) {
-                AppText(entry.title, variant = TextVariant.Body, color = colors.onSurfaceHigh)
-                if (entry.isNew) NewBadge()
-            }
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(6.dp),
-            ) {
-                MaterialSymbol(entry.category.icon, size = 14.dp, tint = categoryColor)
-                AppText(meta, variant = TextVariant.Caption, color = colors.onSurfaceMedium)
-            }
-        }
-        AppText(
-            text = MoneyFormatter.format(entry.amount, withDecimals = true, withSign = isPositive),
-            variant = TextVariant.BodyMono,
-            color = amountColor,
-            modifier = Modifier.padding(start = 12.dp),
-        )
-    }
+    EntryRow(
+        title = entry.title,
+        meta = meta,
+        trailing = { EntryAmount(entry.amount, entry.type) },
+        modifier = modifier,
+        titleTrailing = if (entry.isNew) ({ NewBadge() }) else null,
+        metaIcon = entry.category.icon,
+        metaIconColor = parseHexColor(entry.category.colorHex),
+        highlight = entry.isNew,
+        showDivider = showDivider,
+    )
 }
 
 @Composable

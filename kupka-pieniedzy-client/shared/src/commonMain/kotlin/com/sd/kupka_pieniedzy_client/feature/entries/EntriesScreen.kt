@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -32,6 +33,8 @@ import com.sd.kupka_pieniedzy_client.core.presentation.ScreenState
 import com.sd.kupka_pieniedzy_client.core.time.LocalToday
 import com.sd.kupka_pieniedzy_client.designsystem.component.AppText
 import com.sd.kupka_pieniedzy_client.designsystem.component.AsyncBanner
+import com.sd.kupka_pieniedzy_client.designsystem.component.EntryAmount
+import com.sd.kupka_pieniedzy_client.designsystem.component.EntryRow
 import com.sd.kupka_pieniedzy_client.designsystem.component.IconTile
 import com.sd.kupka_pieniedzy_client.designsystem.component.KupkaListCard
 import com.sd.kupka_pieniedzy_client.designsystem.component.KupkaProgressBar
@@ -53,7 +56,6 @@ import com.sd.kupka_pieniedzy_client.domain.model.EntryKind
 import com.sd.kupka_pieniedzy_client.domain.model.EntryListItem
 import com.sd.kupka_pieniedzy_client.domain.model.EntrySort
 import com.sd.kupka_pieniedzy_client.domain.model.ReceiptPositionItem
-import com.sd.kupka_pieniedzy_client.domain.model.TransactionType
 import com.sd.kupka_pieniedzy_client.domain.model.TrendDirection
 import com.sd.kupka_pieniedzy_client.localization.LocalStrings
 import com.sd.kupka_pieniedzy_client.navigation.AppBottomBar
@@ -501,18 +503,20 @@ private fun DayCard(
     }
 }
 
+private val rowPadding = PaddingValues(horizontal = 16.dp, vertical = 11.dp)
+
 @Composable
 private fun StandardRow(item: EntryListItem, showDivider: Boolean) {
-    val colors = KupkaTheme.colors
     val categoryColor = parseHexColor(item.category.colorHex)
-    EntryRowScaffold(
-        leading = { IconTile(item.category.icon, categoryColor, tileSize = 40.dp, iconSize = 21.dp) },
+    EntryRow(
         title = item.title,
+        meta = item.category.name,
+        trailing = { EntryAmount(item.amount, item.type) },
+        leading = { IconTile(item.category.icon, categoryColor, tileSize = 40.dp, iconSize = 21.dp) },
         metaIcon = item.category.icon,
         metaIconColor = categoryColor,
-        meta = item.category.name,
-        trailing = { AmountText(item) },
         showDivider = showDivider,
+        contentPadding = rowPadding,
     )
 }
 
@@ -529,51 +533,33 @@ private fun ReceiptRow(
     val nav = LocalNavigator.current
     val categoryColor = parseHexColor(item.category.colorHex)
 
-    Column(
-        modifier =
-            Modifier.fillMaxWidth()
-                .then(
-                    if (showDivider && !expanded) Modifier.bottomDivider(colors.divider.copy(alpha = 0.6f))
-                    else Modifier
-                )
-    ) {
-        Row(
-            modifier =
-                Modifier.fillMaxWidth()
-                    .clickable { item.receiptId?.let { nav.push(Route.Receipt(it)) } }
-                    .padding(horizontal = 16.dp, vertical = 11.dp),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Row(
-                modifier = Modifier.weight(1f),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(13.dp),
-            ) {
-                ReceiptIconTile(item.category.icon, categoryColor)
-                Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                    AppText(item.title, variant = TextVariant.Body, color = colors.onSurfaceHigh)
-                    AppText(
-                        strings.receiptRowMeta(item.receiptItemCount ?: 0),
-                        variant = TextVariant.Caption,
-                        color = colors.onSurfaceMedium,
-                    )
-                }
-            }
-            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                AmountText(item)
-                Box(
-                    modifier = Modifier.size(28.dp).clickable(onClick = onToggle),
-                    contentAlignment = Alignment.Center,
+    Column(modifier = Modifier.fillMaxWidth()) {
+        EntryRow(
+            title = item.title,
+            meta = strings.receiptRowMeta(item.receiptItemCount ?: 0),
+            trailing = {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
                 ) {
-                    MaterialSymbol(
-                        if (expanded) AppIcons.ExpandLess else AppIcons.ExpandMore,
-                        size = 20.dp,
-                        tint = colors.onSurfaceLow,
-                    )
+                    EntryAmount(item.amount, item.type)
+                    Box(
+                        modifier = Modifier.size(28.dp).clickable(onClick = onToggle),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        MaterialSymbol(
+                            if (expanded) AppIcons.ExpandLess else AppIcons.ExpandMore,
+                            size = 20.dp,
+                            tint = colors.onSurfaceLow,
+                        )
+                    }
                 }
-            }
-        }
+            },
+            leading = { ReceiptIconTile(item.category.icon, categoryColor) },
+            onClick = { item.receiptId?.let { nav.push(Route.Receipt(it)) } },
+            showDivider = showDivider && !expanded,
+            contentPadding = rowPadding,
+        )
         if (expanded) {
             ReceiptPositions(positions, onToggle)
         }
@@ -669,22 +655,12 @@ private fun PositionRow(pos: ReceiptPositionItem, showDivider: Boolean) {
 private fun AnalyzingRow(item: EntryListItem, showDivider: Boolean) {
     val colors = KupkaTheme.colors
     val strings = LocalStrings.current
-    Row(
-        modifier =
-            Modifier.fillMaxWidth()
-                .background(colors.primary.copy(alpha = 0.06f))
-                .then(
-                    if (showDivider) Modifier.bottomDivider(colors.divider.copy(alpha = 0.6f)) else Modifier
-                )
-                .padding(horizontal = 16.dp, vertical = 11.dp),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Row(
-            modifier = Modifier.weight(1f),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(13.dp),
-        ) {
+    EntryRow(
+        title = item.title,
+        meta = strings.analyzingReceipt,
+        metaColor = colors.primaryHover,
+        trailing = { AppText("—", variant = TextVariant.BodyMono, color = colors.onSurfaceLow) },
+        leading = {
             Box(
                 modifier =
                     Modifier.size(40.dp)
@@ -694,66 +670,10 @@ private fun AnalyzingRow(item: EntryListItem, showDivider: Boolean) {
             ) {
                 LoadingIndicator(size = 22)
             }
-            Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                AppText(item.title, variant = TextVariant.Body, color = colors.onSurfaceHigh)
-                AppText(strings.analyzingReceipt, variant = TextVariant.Caption, color = colors.primaryHover)
-            }
-        }
-        AppText("—", variant = TextVariant.BodyMono, color = colors.onSurfaceLow)
-    }
-}
-
-@Composable
-private fun EntryRowScaffold(
-    leading: @Composable () -> Unit,
-    title: String,
-    metaIcon: String,
-    metaIconColor: Color,
-    meta: String,
-    trailing: @Composable () -> Unit,
-    showDivider: Boolean,
-) {
-    val colors = KupkaTheme.colors
-    Row(
-        modifier =
-            Modifier.fillMaxWidth()
-                .then(
-                    if (showDivider) Modifier.bottomDivider(colors.divider.copy(alpha = 0.6f)) else Modifier
-                )
-                .padding(horizontal = 16.dp, vertical = 11.dp),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Row(
-            modifier = Modifier.weight(1f),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(13.dp),
-        ) {
-            leading()
-            Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                AppText(title, variant = TextVariant.Body, color = colors.onSurfaceHigh)
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(6.dp),
-                ) {
-                    MaterialSymbol(metaIcon, size = 14.dp, tint = metaIconColor)
-                    AppText(meta, variant = TextVariant.Caption, color = colors.onSurfaceMedium)
-                }
-            }
-        }
-        trailing()
-    }
-}
-
-@Composable
-private fun AmountText(item: EntryListItem) {
-    val colors = KupkaTheme.colors
-    val isPositive = item.type == TransactionType.Refund || item.type == TransactionType.Income
-    val color = if (isPositive) colors.budgetGreenFill else colors.onSurfaceHigh
-    AppText(
-        MoneyFormatter.format(item.amount, withDecimals = true, withSign = isPositive),
-        variant = TextVariant.BodyMono,
-        color = color,
+        },
+        highlight = true,
+        showDivider = showDivider,
+        contentPadding = rowPadding,
     )
 }
 
