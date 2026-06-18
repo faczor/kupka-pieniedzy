@@ -69,6 +69,13 @@ private fun successContent(message: ToastMessage.Success, strings: Strings): Pai
                     message.name,
                     message.budget?.let { MoneyFormatter.format(it, withDecimals = false) },
                 )
+        is ToastMessage.CategoryUpdated ->
+            strings.categoryUpdatedTitle to strings.categoryUpdatedSubtitle(message.name)
+        is ToastMessage.CategoryDeleted ->
+            strings.categoryDeletedTitle(message.name) to
+                if (message.movedCount != null && message.targetName != null)
+                    strings.categoryDeletedMovedSubtitle(message.movedCount, message.targetName)
+                else null
         ToastMessage.ExpenseSaved -> strings.expenseSavedTitle to strings.expenseSavedSubtitle
         ToastMessage.ReceiptSaved -> strings.receiptSavedTitle to strings.receiptSavedSubtitle
         ToastMessage.ReceiptDeleted -> strings.receiptDeletedTitle to null
@@ -77,6 +84,8 @@ private fun successContent(message: ToastMessage.Success, strings: Strings): Pai
 private fun errorTitle(message: ToastMessage.Error, strings: Strings): String =
     when (message) {
         ToastMessage.CategoryAddFailed -> strings.categoryAddErrorTitle
+        ToastMessage.CategoryUpdateFailed -> strings.categoryUpdateErrorTitle
+        ToastMessage.CategoryDeleteFailed -> strings.categoryDeleteErrorTitle
         ToastMessage.ExpenseSaveFailed -> strings.expenseSaveErrorTitle
         ToastMessage.ReceiptSaveFailed -> strings.receiptSaveErrorTitle
         ToastMessage.ReceiptDeleteFailed -> strings.receiptDeleteErrorTitle

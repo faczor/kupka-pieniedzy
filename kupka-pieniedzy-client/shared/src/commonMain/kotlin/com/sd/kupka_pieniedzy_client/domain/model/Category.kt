@@ -32,3 +32,10 @@ data class NewCategory(
     val colorHex: String,
     val monthlyBudget: Money?,
 )
+
+data class EditCategory(
+    val name: String,
+    val icon: String,
+    val colorHex: String,
+    val monthlyBudget: Money?,
+)

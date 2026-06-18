@@ -18,6 +18,7 @@ data class CategoryDto(
     @SerialName("parent_id") val parentId: String? = null,
     @SerialName("is_default") val isDefault: Boolean = false,
     @SerialName("is_dynamic") val isDynamic: Boolean = false,
+    @SerialName("active") val active: Boolean = true,
     // Budżet bieżącego miesiąca dołączany przez widok/embed; NUMERIC(12,2) w zł.
     @SerialName("monthly_budget") val monthlyBudget: Double? = null,
     @SerialName("subcategory_count") val subcategoryCount: Int = 0,
