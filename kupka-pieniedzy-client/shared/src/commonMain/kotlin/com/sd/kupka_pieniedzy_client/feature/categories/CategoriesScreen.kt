@@ -277,8 +277,6 @@ private fun CategoryListRow(category: Category) {
             val subtitle =
                 when {
                     category.isDefault -> strings.defaultCategoryHint
-                    category.subcategoryCount > 0 ->
-                        strings.subcategoriesCount(category.subcategoryCount)
                     else -> null
                 }
             if (subtitle != null) {

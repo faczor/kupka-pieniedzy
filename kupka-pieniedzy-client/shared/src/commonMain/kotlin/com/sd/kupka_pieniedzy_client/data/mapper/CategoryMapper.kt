@@ -20,11 +20,7 @@ fun CategoryDto.toDomain(currency: String, budgetMinor: Long? = null): Category 
         name = name,
         icon = icon,
         colorHex = color,
-        level = level,
-        parentId = parentId,
         isDefault = isDefault,
-        isDynamic = isDynamic,
         monthlyBudget = monthly,
-        subcategoryCount = subcategoryCount,
     )
 }

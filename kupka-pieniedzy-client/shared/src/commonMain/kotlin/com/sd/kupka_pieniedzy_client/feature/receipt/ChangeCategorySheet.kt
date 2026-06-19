@@ -22,7 +22,6 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.unit.dp
 import com.sd.kupka_pieniedzy_client.core.money.MoneyFormatter
 import com.sd.kupka_pieniedzy_client.designsystem.component.AppText
-import com.sd.kupka_pieniedzy_client.designsystem.component.DashedButton
 import com.sd.kupka_pieniedzy_client.designsystem.component.FormLabel
 import com.sd.kupka_pieniedzy_client.designsystem.component.PrimaryButton
 import com.sd.kupka_pieniedzy_client.designsystem.component.TextVariant
@@ -37,7 +36,7 @@ import com.sd.kupka_pieniedzy_client.localization.LocalStrings
 @Composable
 fun ColumnScope.ChangeCategorySheetContent(
     item: AnalyzedItem,
-    subcategories: List<Category>,
+    categories: List<Category>,
     onAssign: (categoryId: String) -> Unit,
     onClose: () -> Unit,
 ) {
@@ -60,28 +59,20 @@ fun ColumnScope.ChangeCategorySheetContent(
         )
     }
 
-    FormLabel(strings.groceriesSubcategoriesLabel)
+    FormLabel(strings.fieldCategory)
     Spacer(Modifier.height(10.dp))
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        subcategories.forEach { category ->
-            SubcategoryRow(
+        categories.forEach { category ->
+            CategoryRow(
                 category = category,
                 selected = category.id == selectedId,
                 onClick = { selectedId = category.id },
             )
         }
     }
-
-    Spacer(Modifier.height(14.dp))
-    DashedButton(
-        text = strings.newSubcategory,
-        onClick = {},
-        leadingIcon = AppIcons.Add,
-        height = 48.dp,
-    )
     Spacer(Modifier.height(14.dp))
 
-    val selectedName = subcategories.firstOrNull { it.id == selectedId }?.name
+    val selectedName = categories.firstOrNull { it.id == selectedId }?.name
     PrimaryButton(
         text = if (selectedName != null) strings.assignCategory(selectedName) else strings.save,
         onClick = { selectedId?.let(onAssign) },
@@ -91,7 +82,7 @@ fun ColumnScope.ChangeCategorySheetContent(
 }
 
 @Composable
-private fun SubcategoryRow(category: Category, selected: Boolean, onClick: () -> Unit) {
+private fun CategoryRow(category: Category, selected: Boolean, onClick: () -> Unit) {
     val colors = KupkaTheme.colors
     val color = parseHexColor(category.colorHex)
     Row(

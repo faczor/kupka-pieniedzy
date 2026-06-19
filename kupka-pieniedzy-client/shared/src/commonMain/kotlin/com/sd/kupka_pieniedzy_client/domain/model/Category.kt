@@ -11,12 +11,8 @@ data class Category(
     val name: String,
     val icon: String, // nazwa ligatury Material Symbols
     val colorHex: String, // np. "#7BAE5C"
-    val level: Int, // 1 = L1, 2 = sub-kategoria spożywki
-    val parentId: String?, // null dla L1
     val isDefault: Boolean, // true tylko dla „inne”
-    val isDynamic: Boolean, // true dla L2
     val monthlyBudget: Money?, // null = brak budżetu
-    val subcategoryCount: Int = 0,
 ) {
     val displayRef: CategoryRef
         get() = CategoryRef(name, icon, colorHex)

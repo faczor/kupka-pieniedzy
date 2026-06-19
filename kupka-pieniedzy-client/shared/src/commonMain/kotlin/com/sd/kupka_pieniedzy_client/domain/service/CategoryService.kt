@@ -12,8 +12,6 @@ import com.sd.kupka_pieniedzy_client.domain.repository.CategoryRepository
 interface CategoryService {
     suspend fun getCategories(): Outcome<List<Category>>
 
-    suspend fun getGroceriesSubcategories(): Outcome<List<Category>>
-
     suspend fun getDefaultCategory(): Outcome<Category>
 
     suspend fun createCategory(input: NewCategory): Outcome<Category>
@@ -28,9 +26,6 @@ interface CategoryService {
 class DefaultCategoryService(private val categoryRepository: CategoryRepository) : CategoryService {
 
     override suspend fun getCategories(): Outcome<List<Category>> = categoryRepository.getAll()
-
-    override suspend fun getGroceriesSubcategories(): Outcome<List<Category>> =
-        categoryRepository.getGroceriesSubcategories()
 
     override suspend fun getDefaultCategory(): Outcome<Category> = categoryRepository.getDefault()
 

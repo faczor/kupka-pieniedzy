@@ -116,6 +116,7 @@ interface Strings {
 
     // --- Paragon (wynik analizy) ---
     val receiptTitle: String
+    val confirmReceiptExpense: String
 
     fun itemsHeader(count: Int): String
 
@@ -130,8 +131,6 @@ interface Strings {
     fun completeCategoriesCta(count: Int): String
 
     val itemCategorySheetTitle: String
-    val groceriesSubcategoriesLabel: String
-    val newSubcategory: String
 
     fun assignCategory(category: String): String
 
@@ -146,8 +145,6 @@ interface Strings {
 
     // --- Kategorie ---
     val categoriesTitle: String
-
-    fun subcategoriesCount(count: Int): String
 
     val defaultBadge: String
     val defaultCategoryHint: String

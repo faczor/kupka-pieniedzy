@@ -63,7 +63,7 @@ class ManualExpenseViewModel(
                     onSuccess = { all ->
                         _state.update {
                             it.copy(
-                                categories = all.filter { c -> c.level == 1 },
+                                categories = all,
                                 categoriesLoading = false,
                             )
                         }

@@ -30,8 +30,6 @@ interface CategoryRepository {
 
     suspend fun getDefault(): Outcome<Category>
 
-    suspend fun getGroceriesSubcategories(): Outcome<List<Category>>
-
     suspend fun create(input: NewCategory): Outcome<Category>
 
     suspend fun update(id: String, input: EditCategory): Outcome<Category>

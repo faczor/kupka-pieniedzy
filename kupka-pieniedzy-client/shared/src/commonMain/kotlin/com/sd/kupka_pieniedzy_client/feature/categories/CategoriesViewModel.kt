@@ -97,7 +97,7 @@ class CategoriesViewModel(
                 categoryService
                     .getCategories()
                     .fold(
-                        onSuccess = { all -> ScreenState.Content(all.filter { it.level == 1 }) },
+                        onSuccess = { all -> ScreenState.Content(all) },
                         onFailure = {
                             AppLog.failure("Categories.load", it)
                             ScreenState.Error(it)
