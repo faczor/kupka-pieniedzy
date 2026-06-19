@@ -40,8 +40,21 @@ object PlStrings : Strings {
     override val onboardingLoginTitle = "Załóż konto"
     override val onboardingLoginSubtitle =
         "Twoje wydatki synchronizują się i są bezpieczne na każdym urządzeniu."
-    override val onboardingContinueGoogle = "Kontynuuj z Google"
-    override val onboardingContinueApple = "Kontynuuj z Apple"
+    override val onboardingContinueApple = "Zaloguj przez Apple"
+    override val onboardingLoginOr = "lub"
+    override val onboardingEmailPlaceholder = "twoj@email.pl"
+    override val onboardingSendCode = "Wyślij kod logowania"
+    override val onboardingEmailHint = "Wyślemy 6-cyfrowy kod na Twój e-mail — bez hasła."
+    override val onboardingEmailInvalid = "Podaj poprawny adres e-mail."
+    override val onboardingCodeTitle = "Wpisz kod"
+
+    override fun onboardingCodeSubtitle(email: String) = "Wysłaliśmy 6-cyfrowy kod na $email."
+
+    override val onboardingCodePlaceholder = "______"
+    override val onboardingVerifyCode = "Zaloguj"
+    override val onboardingCodeError = "Nieprawidłowy lub wygasły kod. Spróbuj ponownie."
+    override val onboardingNoCode = "Nie dostałeś kodu?"
+    override val onboardingResendCode = "Wyślij ponownie"
     override val onboardingTermsNotice = "Kontynuując akceptujesz Regulamin i Politykę prywatności."
     override val onboardingSignInError = "Nie udało się zalogować. Spróbuj ponownie."
 
@@ -413,6 +426,8 @@ object PlStrings : Strings {
             is DomainError.Server -> "Błąd serwera, spróbuj ponownie"
             DomainError.NotFound -> "Nie znaleziono danych"
             DomainError.Unauthorized -> "Brak dostępu"
+            // Domknięcie `when` — w praktyce anulowanie jest połykane w VM (nie pokazujemy błędu).
+            DomainError.AuthCancelled -> "Logowanie anulowane"
             DomainError.Serialization -> "Nie udało się odczytać odpowiedzi"
             DomainError.Configuration -> "Aplikacja nie jest skonfigurowana (Supabase)"
             is DomainError.Validation -> validationMessage(error.rule)

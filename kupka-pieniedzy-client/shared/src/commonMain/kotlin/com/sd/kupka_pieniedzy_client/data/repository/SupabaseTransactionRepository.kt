@@ -3,6 +3,7 @@ package com.sd.kupka_pieniedzy_client.data.repository
 import com.sd.kupka_pieniedzy_client.core.config.AppConfig
 import com.sd.kupka_pieniedzy_client.core.money.Money
 import com.sd.kupka_pieniedzy_client.core.result.Outcome
+import com.sd.kupka_pieniedzy_client.data.auth.CurrentUserProvider
 import com.sd.kupka_pieniedzy_client.data.dto.RecentEntryDto
 import com.sd.kupka_pieniedzy_client.data.dto.TransactionDto
 import com.sd.kupka_pieniedzy_client.data.dto.TransactionInsertDto
@@ -23,6 +24,7 @@ import kotlinx.datetime.LocalDate
 class SupabaseTransactionRepository(
     private val supabase: SupabaseClientProvider,
     private val config: AppConfig,
+    private val currentUser: CurrentUserProvider,
 ) : TransactionRepository {
 
     /** Ostatnie nie-transferowe wpisy z dołączoną kategorią (widok `recent_entries`). */
@@ -31,7 +33,7 @@ class SupabaseTransactionRepository(
             supabase.postgrest
                 .from("recent_entries")
                 .select {
-                    filter { eq("user_id", config.userId) }
+                    filter { eq("user_id", currentUser.requireUserId()) }
                     order("date", Order.DESCENDING)
                     limit(limit.toLong())
                 }
@@ -46,7 +48,7 @@ class SupabaseTransactionRepository(
                 .from("recent_entries")
                 .select {
                     filter {
-                        eq("user_id", config.userId)
+                        eq("user_id", currentUser.requireUserId())
                         gte("date", start.toString())
                         lte("date", end.toString())
                     }
@@ -67,7 +69,7 @@ class SupabaseTransactionRepository(
                     .from("transactions")
                     .select {
                         filter {
-                            eq("user_id", config.userId)
+                            eq("user_id", currentUser.requireUserId())
                             isIn("type", listOf("expense", "refund"))
                             gte("date", start.toString())
                             lte("date", end.toString())
@@ -91,7 +93,7 @@ class SupabaseTransactionRepository(
         runCatchingDomain(supabase.isConfigured) {
             val insert =
                 TransactionInsertDto(
-                    userId = config.userId,
+                    userId = currentUser.requireUserId(),
                     date = expense.date.toString(),
                     amount = expense.amount.toZl(),
                     type = TransactionType.Expense.toDbValue(),
@@ -118,7 +120,7 @@ class SupabaseTransactionRepository(
         runCatchingDomain(supabase.isConfigured) {
             val insert =
                 TransactionInsertDto(
-                    userId = config.userId,
+                    userId = currentUser.requireUserId(),
                     date = date.toString(),
                     amount = amount.toZl(),
                     type = TransactionType.Expense.toDbValue(),
@@ -142,20 +144,18 @@ class SupabaseTransactionRepository(
         date: LocalDate,
     ): Outcome<Unit> =
         runCatchingDomain(supabase.isConfigured) {
-            supabase.postgrest
-                .from("transactions")
-                .update(
-                    ReceiptExpensePatch(
-                        amount = amount.toZl(),
-                        merchant = merchant,
-                        date = date.toString(),
-                    )
-                ) {
-                    filter {
-                        eq("user_id", config.userId)
-                        eq("id", transactionId)
-                    }
+            supabase.postgrest.from("transactions").update(
+                ReceiptExpensePatch(
+                    amount = amount.toZl(),
+                    merchant = merchant,
+                    date = date.toString(),
+                )
+            ) {
+                filter {
+                    eq("user_id", currentUser.requireUserId())
+                    eq("id", transactionId)
                 }
+            }
             Unit
         }
 
@@ -163,7 +163,7 @@ class SupabaseTransactionRepository(
         runCatchingDomain(supabase.isConfigured) {
             supabase.postgrest.from("transactions").delete {
                 filter {
-                    eq("user_id", config.userId)
+                    eq("user_id", currentUser.requireUserId())
                     eq("id", transactionId)
                 }
             }

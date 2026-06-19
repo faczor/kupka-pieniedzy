@@ -60,6 +60,8 @@ kotlin {
             implementation(project.dependencies.platform(libs.supabase.bom))
             implementation(libs.supabase.postgrest)
             implementation(libs.supabase.storage)
+            implementation(libs.supabase.auth)
+            implementation(libs.supabase.compose.auth)
 
             // Logging
             implementation(libs.kermit)

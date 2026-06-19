@@ -19,8 +19,11 @@ sealed interface DomainError {
     /** Nie znaleziono zasobu (404 / pusty wynik tam, gdzie oczekiwano wiersza). */
     data object NotFound : DomainError
 
-    /** Brak autoryzacji / wygasła sesja (401/403). W MVP user jest hardcoded. */
+    /** Brak autoryzacji / wygasła sesja (401/403). */
     data object Unauthorized : DomainError
+
+    /** Użytkownik anulował logowanie (np. zamknął sheet Apple). Nie jest to błąd do pokazania. */
+    data object AuthCancelled : DomainError
 
     /** Naruszenie reguły domenowej walidowanej po stronie klienta lub bazy. */
     data class Validation(val rule: ValidationRule) : DomainError

@@ -42,11 +42,24 @@ interface Strings {
     val onboardingHaveAccount: String
     val onboardingSignIn: String
 
-    // Logowanie (krok 1/3)
+    // Logowanie (krok 1/3) — Apple (iOS) + kod e-mail (OTP, bez hasła)
     val onboardingLoginTitle: String
     val onboardingLoginSubtitle: String
-    val onboardingContinueGoogle: String
     val onboardingContinueApple: String
+    val onboardingLoginOr: String
+    val onboardingEmailPlaceholder: String
+    val onboardingSendCode: String
+    val onboardingEmailHint: String
+    val onboardingEmailInvalid: String
+    val onboardingCodeTitle: String
+
+    fun onboardingCodeSubtitle(email: String): String
+
+    val onboardingCodePlaceholder: String
+    val onboardingVerifyCode: String
+    val onboardingCodeError: String
+    val onboardingNoCode: String
+    val onboardingResendCode: String
     val onboardingTermsNotice: String
     val onboardingSignInError: String
 

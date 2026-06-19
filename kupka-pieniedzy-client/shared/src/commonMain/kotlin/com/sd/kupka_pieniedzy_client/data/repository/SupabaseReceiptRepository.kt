@@ -3,13 +3,14 @@ package com.sd.kupka_pieniedzy_client.data.repository
 import com.sd.kupka_pieniedzy_client.core.config.AppConfig
 import com.sd.kupka_pieniedzy_client.core.logging.AppLog
 import com.sd.kupka_pieniedzy_client.core.result.Outcome
+import com.sd.kupka_pieniedzy_client.data.auth.CurrentUserProvider
 import com.sd.kupka_pieniedzy_client.data.dto.ReceiptDto
 import com.sd.kupka_pieniedzy_client.data.dto.ReceiptInsertDto
 import com.sd.kupka_pieniedzy_client.data.dto.ReceiptItemDto
 import com.sd.kupka_pieniedzy_client.data.dto.ReceiptItemInsertDto
 import com.sd.kupka_pieniedzy_client.data.mapper.toAnalyzedReceipt
-import com.sd.kupka_pieniedzy_client.data.mapper.toDomain
 import com.sd.kupka_pieniedzy_client.data.mapper.toDbValue
+import com.sd.kupka_pieniedzy_client.data.mapper.toDomain
 import com.sd.kupka_pieniedzy_client.data.mapper.toRawOcrJson
 import com.sd.kupka_pieniedzy_client.data.mapper.toZl
 import com.sd.kupka_pieniedzy_client.data.supabase.SupabaseClientProvider
@@ -31,6 +32,7 @@ internal const val RECEIPTS_BUCKET = "receipts"
 class SupabaseReceiptRepository(
     private val supabase: SupabaseClientProvider,
     private val config: AppConfig,
+    private val currentUser: CurrentUserProvider,
 ) : ReceiptRepository {
 
     private val json
@@ -40,7 +42,7 @@ class SupabaseReceiptRepository(
         runCatchingDomain(supabase.isConfigured) {
             val insert =
                 ReceiptInsertDto(
-                    userId = config.userId,
+                    userId = currentUser.requireUserId(),
                     store = store,
                     imagePath = imagePath,
                     status = "pending",
@@ -54,12 +56,13 @@ class SupabaseReceiptRepository(
 
     override suspend fun uploadImage(receiptId: String, bytes: ByteArray): Outcome<String> =
         runCatchingDomain(supabase.isConfigured) {
-            // Konwencja ścieżki: `<user_id>/<receipt_id>.jpg` (pierwszy segment = user_id pod przyszłe RLS).
-            val path = "${config.userId}/$receiptId.jpg"
+            // Konwencja ścieżki: `<user_id>/<receipt_id>.jpg` (pierwszy segment = user_id pod
+            // przyszłe RLS).
+            val path = "${currentUser.requireUserId()}/$receiptId.jpg"
             supabase.storage.from(RECEIPTS_BUCKET).upload(path, bytes) { upsert = true }
             supabase.postgrest.from("receipts").update(ReceiptImagePathPatch(imagePath = path)) {
                 filter {
-                    eq("user_id", config.userId)
+                    eq("user_id", currentUser.requireUserId())
                     eq("id", receiptId)
                 }
             }
@@ -77,7 +80,7 @@ class SupabaseReceiptRepository(
                     .from("receipts")
                     .select {
                         filter {
-                            eq("user_id", config.userId)
+                            eq("user_id", currentUser.requireUserId())
                             eq("id", receiptId)
                         }
                         limit(1)
@@ -90,7 +93,7 @@ class SupabaseReceiptRepository(
         runCatchingDomain(supabase.isConfigured) {
             supabase.postgrest.from("receipts").update(ReceiptStatusPatch(status = "pending")) {
                 filter {
-                    eq("user_id", config.userId)
+                    eq("user_id", currentUser.requireUserId())
                     eq("id", receiptId)
                 }
             }
@@ -103,7 +106,7 @@ class SupabaseReceiptRepository(
                 .from("receipts")
                 .select {
                     filter {
-                        eq("user_id", config.userId)
+                        eq("user_id", currentUser.requireUserId())
                         isIn("status", listOf("pending", "ready", "failed"))
                     }
                     order("created_at", Order.DESCENDING)
@@ -121,7 +124,7 @@ class SupabaseReceiptRepository(
                 .from("receipts")
                 .select {
                     filter {
-                        eq("user_id", config.userId)
+                        eq("user_id", currentUser.requireUserId())
                         isIn("status", listOf("ready", "saved"))
                         gte("date", start.toString())
                         lte("date", end.toString())
@@ -132,16 +135,13 @@ class SupabaseReceiptRepository(
                 .map { it.toDomain(config.defaultCurrency) }
         }
 
-    override suspend fun linkTransaction(
-        receiptId: String,
-        transactionId: String,
-    ): Outcome<Unit> =
+    override suspend fun linkTransaction(receiptId: String, transactionId: String): Outcome<Unit> =
         runCatchingDomain(supabase.isConfigured) {
             supabase.postgrest.from("receipts").update(
                 ReceiptLinkPatch(transactionId = transactionId)
             ) {
                 filter {
-                    eq("user_id", config.userId)
+                    eq("user_id", currentUser.requireUserId())
                     eq("id", receiptId)
                 }
             }
@@ -154,7 +154,7 @@ class SupabaseReceiptRepository(
                 .from("receipts")
                 .select {
                     filter {
-                        eq("user_id", config.userId)
+                        eq("user_id", currentUser.requireUserId())
                         eq("status", "ready")
                         eq("acknowledged", false)
                     }
@@ -167,9 +167,11 @@ class SupabaseReceiptRepository(
 
     override suspend fun acknowledge(receiptId: String): Outcome<Unit> =
         runCatchingDomain(supabase.isConfigured) {
-            supabase.postgrest.from("receipts").update(ReceiptAcknowledgePatch(acknowledged = true)) {
+            supabase.postgrest.from("receipts").update(
+                ReceiptAcknowledgePatch(acknowledged = true)
+            ) {
                 filter {
-                    eq("user_id", config.userId)
+                    eq("user_id", currentUser.requireUserId())
                     eq("id", receiptId)
                 }
             }
@@ -183,7 +185,7 @@ class SupabaseReceiptRepository(
                     .from("receipts")
                     .select {
                         filter {
-                            eq("user_id", config.userId)
+                            eq("user_id", currentUser.requireUserId())
                             eq("id", receiptId)
                         }
                         limit(1)
@@ -194,7 +196,7 @@ class SupabaseReceiptRepository(
                     .from("receipt_items")
                     .select {
                         filter {
-                            eq("user_id", config.userId)
+                            eq("user_id", currentUser.requireUserId())
                             eq("receipt_id", receiptId)
                         }
                         order("position", Order.ASCENDING)
@@ -221,14 +223,15 @@ class SupabaseReceiptRepository(
                 )
             supabase.postgrest.from("receipts").update(patch) {
                 filter {
-                    eq("user_id", config.userId)
+                    eq("user_id", currentUser.requireUserId())
                     eq("id", receipt.receiptId)
                 }
             }
-            // 2. Ustrukturyzowane pozycje do receipt_items (model dla klienta) — zastępujemy istniejące.
+            // 2. Ustrukturyzowane pozycje do receipt_items (model dla klienta) — zastępujemy
+            // istniejące.
             supabase.postgrest.from("receipt_items").delete {
                 filter {
-                    eq("user_id", config.userId)
+                    eq("user_id", currentUser.requireUserId())
                     eq("receipt_id", receipt.receiptId)
                 }
             }
@@ -237,7 +240,7 @@ class SupabaseReceiptRepository(
                     receipt.items.mapIndexed { index, item ->
                         ReceiptItemInsertDto(
                             receiptId = receipt.receiptId,
-                            userId = config.userId,
+                            userId = currentUser.requireUserId(),
                             position = index,
                             name = item.name,
                             amount = item.amount.toZl(),
@@ -258,7 +261,7 @@ class SupabaseReceiptRepository(
                 ReceiptFailedPatch(status = "failed", failureReason = reason.toDbValue())
             ) {
                 filter {
-                    eq("user_id", config.userId)
+                    eq("user_id", currentUser.requireUserId())
                     eq("id", receiptId)
                 }
             }
@@ -267,13 +270,14 @@ class SupabaseReceiptRepository(
 
     override suspend fun delete(receiptId: String): Outcome<Unit> =
         runCatchingDomain(supabase.isConfigured) {
-            // Najpierw best-effort usuń zdjęcie z bucketu — brak/niepowodzenie nie blokuje usunięcia wiersza.
+            // Najpierw best-effort usuń zdjęcie z bucketu — brak/niepowodzenie nie blokuje
+            // usunięcia wiersza.
             val dto =
                 supabase.postgrest
                     .from("receipts")
                     .select {
                         filter {
-                            eq("user_id", config.userId)
+                            eq("user_id", currentUser.requireUserId())
                             eq("id", receiptId)
                         }
                         limit(1)
@@ -282,12 +286,14 @@ class SupabaseReceiptRepository(
             dto?.imagePath?.let { path ->
                 runCatching { supabase.storage.from(RECEIPTS_BUCKET).delete(path) }
                     .onFailure {
-                        AppLog.w("Receipt.delete: nie usunięto zdjęcia z bucketu (best-effort): ${it.message}")
+                        AppLog.w(
+                            "Receipt.delete: nie usunięto zdjęcia z bucketu (best-effort): ${it.message}"
+                        )
                     }
             }
             supabase.postgrest.from("receipts").delete {
                 filter {
-                    eq("user_id", config.userId)
+                    eq("user_id", currentUser.requireUserId())
                     eq("id", receiptId)
                 }
             }
@@ -302,21 +308,21 @@ class SupabaseReceiptRepository(
         runCatchingDomain(supabase.isConfigured) {
             // Utrwal końcowe kategorie (po edycji w review) w receipt_items.
             for (item in items) {
-                supabase.postgrest
-                    .from("receipt_items")
-                    .update(ReceiptItemCategoryPatch(categoryId = item.categoryId)) {
-                        filter {
-                            eq("user_id", config.userId)
-                            eq("id", item.id)
-                        }
+                supabase.postgrest.from("receipt_items").update(
+                    ReceiptItemCategoryPatch(categoryId = item.categoryId)
+                ) {
+                    filter {
+                        eq("user_id", currentUser.requireUserId())
+                        eq("id", item.id)
                     }
+                }
             }
             // Podepnij paragon pod transakcję.
             supabase.postgrest.from("receipts").update(
                 ReceiptFinalizePatch(transactionId = transactionId, status = "saved")
             ) {
                 filter {
-                    eq("user_id", config.userId)
+                    eq("user_id", currentUser.requireUserId())
                     eq("id", receiptId)
                 }
             }
@@ -336,17 +342,17 @@ private data class ReceiptReadyPatch(
 
 @kotlinx.serialization.Serializable
 private data class ReceiptAcknowledgePatch(
-    @kotlinx.serialization.SerialName("acknowledged") val acknowledged: Boolean,
+    @kotlinx.serialization.SerialName("acknowledged") val acknowledged: Boolean
 )
 
 @kotlinx.serialization.Serializable
 private data class ReceiptImagePathPatch(
-    @kotlinx.serialization.SerialName("image_path") val imagePath: String,
+    @kotlinx.serialization.SerialName("image_path") val imagePath: String
 )
 
 @kotlinx.serialization.Serializable
 private data class ReceiptStatusPatch(
-    @kotlinx.serialization.SerialName("status") val status: String,
+    @kotlinx.serialization.SerialName("status") val status: String
 )
 
 @kotlinx.serialization.Serializable
@@ -363,10 +369,10 @@ private data class ReceiptFinalizePatch(
 
 @kotlinx.serialization.Serializable
 private data class ReceiptLinkPatch(
-    @kotlinx.serialization.SerialName("transaction_id") val transactionId: String,
+    @kotlinx.serialization.SerialName("transaction_id") val transactionId: String
 )
 
 @kotlinx.serialization.Serializable
 private data class ReceiptItemCategoryPatch(
-    @kotlinx.serialization.SerialName("category_id") val categoryId: String?,
+    @kotlinx.serialization.SerialName("category_id") val categoryId: String?
 )
