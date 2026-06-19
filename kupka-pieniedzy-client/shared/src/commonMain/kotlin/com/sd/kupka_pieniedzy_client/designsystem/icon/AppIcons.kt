@@ -39,8 +39,6 @@ object AppIcons {
     const val RadioUnchecked = "radio_button_unchecked"
     const val Tune = "tune"
     const val Image = "image"
-    const val Share = "ios_share"
-    const val PinchZoom = "pinch_zoom_in"
 
     // Domyślne ikony kategorii/danych używane jako fallback
     const val Label = "label"

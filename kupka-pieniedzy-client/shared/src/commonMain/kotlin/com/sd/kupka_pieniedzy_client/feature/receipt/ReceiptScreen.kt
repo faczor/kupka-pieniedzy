@@ -1,5 +1,6 @@
 package com.sd.kupka_pieniedzy_client.feature.receipt
 
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -24,10 +25,12 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.sd.kupka_pieniedzy_client.core.money.MoneyFormatter
+import com.sd.kupka_pieniedzy_client.core.presentation.ScreenState
 import com.sd.kupka_pieniedzy_client.core.time.LocalToday
 import com.sd.kupka_pieniedzy_client.designsystem.component.AppText
 import com.sd.kupka_pieniedzy_client.designsystem.component.KupkaBottomSheet
@@ -35,6 +38,7 @@ import com.sd.kupka_pieniedzy_client.designsystem.component.KupkaListCard
 import com.sd.kupka_pieniedzy_client.designsystem.component.LoadingIndicator
 import com.sd.kupka_pieniedzy_client.designsystem.component.PrimaryButton
 import com.sd.kupka_pieniedzy_client.designsystem.component.ReceiptItemRow
+import com.sd.kupka_pieniedzy_client.designsystem.component.decodeReceiptBitmap
 import com.sd.kupka_pieniedzy_client.designsystem.component.TextVariant
 import com.sd.kupka_pieniedzy_client.designsystem.component.TopBar
 import com.sd.kupka_pieniedzy_client.designsystem.component.WarnBanner
@@ -65,7 +69,7 @@ fun ReceiptScreen(receiptId: String) {
     val draft = state.draft
 
     if (showPreview && draft != null) {
-        ReceiptPreviewScreen(draft = draft, onClose = { showPreview = false })
+        ReceiptPreviewScreen(image = state.image, onClose = { showPreview = false })
         return
     }
 
@@ -163,6 +167,7 @@ private fun ReceiptBreakdown(
                     dateLabel = relativeDayLabel(draft.date, today, strings),
                     total = MoneyFormatter.format(draft.total),
                     confidencePercent = draft.confidencePercent,
+                    image = state.image,
                     onThumbnailClick = onThumbnailClick,
                     modifier = Modifier.padding(top = 4.dp),
                 )
@@ -233,10 +238,13 @@ private fun ReceiptHeaderCard(
     dateLabel: String,
     total: String,
     confidencePercent: Int,
+    image: ScreenState<ByteArray>?,
     onThumbnailClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val colors = KupkaTheme.colors
+    val thumbnail =
+        remember(image) { (image as? ScreenState.Content)?.value?.let(::decodeReceiptBitmap) }
     Row(
         modifier =
             modifier
@@ -259,6 +267,15 @@ private fun ReceiptHeaderCard(
                         .clickable(onClick = onThumbnailClick),
                 contentAlignment = Alignment.BottomEnd,
             ) {
+                if (thumbnail != null) {
+                    Image(
+                        bitmap = thumbnail,
+                        contentDescription = null,
+                        contentScale = ContentScale.Crop,
+                        modifier = Modifier.matchParentSize(),
+                    )
+                }
+                // Plakietka lupy — afordancja „tapnij, by powiększyć” (nad zdjęciem lub na pustym kafelku).
                 Box(
                     modifier =
                         Modifier.padding(3.dp)

@@ -164,7 +164,6 @@ object PlStrings : Strings {
     override fun assignCategory(category: String) = "Przypisz $category"
 
     override val receiptSourceTitle = "Paragon źródłowy"
-    override val doubleTapToZoom = "Dotknij dwukrotnie, by przybliżyć"
     override val backToBreakdown = "Wróć do rozbicia"
     override val actionReanalyze = "Ponów analizę"
     override val actionReanalyzeSubtitle = "Przelicz pozycje jeszcze raz"

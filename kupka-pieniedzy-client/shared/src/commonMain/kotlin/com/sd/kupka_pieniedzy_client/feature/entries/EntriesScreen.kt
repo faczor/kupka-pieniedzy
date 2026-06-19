@@ -1,6 +1,5 @@
 package com.sd.kupka_pieniedzy_client.feature.entries
 
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -29,8 +28,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.decodeToImageBitmap
-import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -49,6 +46,7 @@ import com.sd.kupka_pieniedzy_client.designsystem.component.KupkaBottomSheet
 import com.sd.kupka_pieniedzy_client.designsystem.component.KupkaListCard
 import com.sd.kupka_pieniedzy_client.designsystem.component.KupkaProgressBar
 import com.sd.kupka_pieniedzy_client.designsystem.component.LoadingIndicator
+import com.sd.kupka_pieniedzy_client.designsystem.component.ReceiptImageView
 import com.sd.kupka_pieniedzy_client.designsystem.component.StateContainer
 import com.sd.kupka_pieniedzy_client.designsystem.component.TextVariant
 import com.sd.kupka_pieniedzy_client.designsystem.component.bottomDivider
@@ -815,7 +813,6 @@ private fun EmptyState(filtered: Boolean) {
 @Composable
 private fun ReceiptImagePreview(state: ScreenState<ByteArray>, onClose: () -> Unit) {
     val colors = KupkaTheme.colors
-    val strings = LocalStrings.current
     Box(
         modifier =
             Modifier.fillMaxSize()
@@ -827,32 +824,7 @@ private fun ReceiptImagePreview(state: ScreenState<ByteArray>, onClose: () -> Un
                 ),
         contentAlignment = Alignment.Center,
     ) {
-        when (state) {
-            is ScreenState.Loading -> LoadingIndicator()
-            is ScreenState.Error ->
-                AppText(
-                    strings.imageLoadError,
-                    variant = TextVariant.Body,
-                    color = colors.onSurfaceMedium,
-                )
-            is ScreenState.Content -> {
-                val bitmap = remember(state.value) { runCatching { state.value.decodeToImageBitmap() }.getOrNull() }
-                if (bitmap != null) {
-                    Image(
-                        bitmap = bitmap,
-                        contentDescription = null,
-                        contentScale = ContentScale.Fit,
-                        modifier = Modifier.fillMaxSize().padding(20.dp),
-                    )
-                } else {
-                    AppText(
-                        strings.imageLoadError,
-                        variant = TextVariant.Body,
-                        color = colors.onSurfaceMedium,
-                    )
-                }
-            }
-        }
+        ReceiptImageView(state = state, modifier = Modifier.fillMaxSize().padding(20.dp))
         MaterialSymbol(
             AppIcons.Close,
             size = 26.dp,

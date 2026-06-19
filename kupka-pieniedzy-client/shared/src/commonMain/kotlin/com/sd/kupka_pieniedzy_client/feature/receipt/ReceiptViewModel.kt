@@ -6,6 +6,7 @@ import com.sd.kupka_pieniedzy_client.core.error.DomainError
 import com.sd.kupka_pieniedzy_client.core.logging.AppLog
 import com.sd.kupka_pieniedzy_client.core.logging.action
 import com.sd.kupka_pieniedzy_client.core.logging.failure
+import com.sd.kupka_pieniedzy_client.core.presentation.ScreenState
 import com.sd.kupka_pieniedzy_client.core.presentation.ToastController
 import com.sd.kupka_pieniedzy_client.core.presentation.ToastMessage
 import com.sd.kupka_pieniedzy_client.core.result.fold
@@ -27,6 +28,8 @@ data class ReceiptUiState(
     val loadError: DomainError? = null,
     val saving: Boolean = false,
     val actionError: DomainError? = null,
+    /** Zdjęcie źródłowe paragonu (miniatura na karcie + pełnoekranowy podgląd). */
+    val image: ScreenState<ByteArray>? = null,
 ) {
     val unassignedCount: Int
         get() = draft?.items?.count { it.categoryId == null } ?: 0
@@ -50,6 +53,7 @@ class ReceiptViewModel(
         this.receiptId = receiptId
         AppLog.action("Receipt.load", "receiptId=$receiptId")
         _state.update { it.copy(loading = true, loadError = null) }
+        loadImage(receiptId)
         viewModelScope.launch {
             receiptService
                 .getDraft(receiptId)
@@ -83,6 +87,27 @@ class ReceiptViewModel(
                             )
                     },
                 )
+        }
+    }
+
+    /** Pobierz zdjęcie źródłowe paragonu ze Storage do podglądu (miniatura + fullscreen). */
+    private fun loadImage(receiptId: String) {
+        _state.update { it.copy(image = ScreenState.Loading) }
+        viewModelScope.launch {
+            val result =
+                receiptService
+                    .getReceiptImage(receiptId)
+                    .fold(
+                        onSuccess = { ScreenState.Content(it) },
+                        onFailure = {
+                            AppLog.failure("Receipt.getImage", it)
+                            ScreenState.Error(it)
+                        },
+                    )
+            // Zignoruj wynik, jeśli w międzyczasie załadowano inny paragon.
+            if (this@ReceiptViewModel.receiptId == receiptId) {
+                _state.update { it.copy(image = result) }
+            }
         }
     }
 

@@ -42,8 +42,6 @@ data class KupkaColors(
     // Chrome / pomocnicze
     val scrim: Color,
     val receiptPaper: Color,
-    val receiptInk: Color,
-    val receiptInkMuted: Color,
 )
 
 /** Dark theme MVP — wartości 1:1 z `tokens-colors.md`. */
@@ -71,8 +69,6 @@ val KupkaDarkColors =
         budgetRedTrack = Color(0xFFD85B4A).copy(alpha = 0.13f),
         scrim = Color.Black.copy(alpha = 0.55f),
         receiptPaper = Color(0xFFEDEBE3),
-        receiptInk = Color(0xFF2A2824),
-        receiptInkMuted = Color(0xFF6E6A60),
     )
 
 val LocalKupkaColors = staticCompositionLocalOf { KupkaDarkColors }
