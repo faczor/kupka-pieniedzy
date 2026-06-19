@@ -4,6 +4,10 @@
 -- alkohol) stają się zwykłymi, równorzędnymi kategoriami. Budżety i przypisania pozycji
 -- (receipt_items.category_id) działają bez zmian — referują po `id`, nie po poziomie.
 
+-- Migracje 0002 (seed) i 0008 (backfill) celowo NIE są ruszane — to niezmienna historia.
+-- Wykonują się przed 0010, gdy kolumny jeszcze istnieją, więc przejdą; relacja L1/L2 z seeda
+-- znika tu po cichu i to jest zamierzone (kategorie stają się płaskie).
+
 -- Indeks na parent_id znika razem z kolumną; dla jasności usuwamy go jawnie.
 drop index if exists idx_categories_parent;
 
