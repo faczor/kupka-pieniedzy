@@ -32,6 +32,7 @@ begin
       and total is not null
   loop
     -- Kategoria nagłówka: L1 „spożywka” dla usera, w razie braku — domyślna („inne”).
+    -- UWAGA: literał musi pozostać zsynchronizowany z GROCERIES_L1_NAME w ReceiptService.kt.
     select id into v_category
     from categories
     where user_id = r.user_id and level = 1 and lower(name) = 'spożywka'

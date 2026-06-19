@@ -89,6 +89,10 @@ class DefaultReceiptService(
         receiptRepository.markReady(analyzed, raw).bind()
         // Przetworzony paragon jest realnym wydatkiem: transakcja powstaje już teraz (status `ready`),
         // dzięki czemu wpis od razu wpada do feedu/sum/budżetów — bez czekania na ręczne zatwierdzenie.
+        // Niuans budżetów (widok budget_progress): pozycje paragonu z przypisaną kategorią liczą się
+        // do budżetów od razu; pozycje bez kategorii (AI nie dopasowało) wchodzą tylko do sumy
+        // miesiąca, a do budżetu per (sub)kategoria trafią dopiero po zatwierdzeniu (badge „do
+        // zatwierdzenia” to sygnalizuje). Nieprzypisanej kwoty z definicji nie da się przypisać.
         ensureReceiptTransaction(receiptId, analyzed.total, analyzed.store, analyzed.date).bind()
         changeNotifier.notifyTransactionsChanged()
     }
@@ -129,11 +133,12 @@ class DefaultReceiptService(
     }
 
     override suspend fun deleteReceipt(receiptId: String): Outcome<Unit> = outcomeBinding {
-        // Pobierz powiązanie z transakcją PRZED usunięciem paragonu.
+        // Kolejność: najpierw transakcja, potem paragon. Gdyby usunięcie transakcji zawiodło,
+        // przerywamy całość (nic nie znika) — odwrotna kolejność zostawiałaby transakcję-sierotę
+        // (FK `on delete set null`) bez możliwości cofnięcia w tej operacji.
         val transactionId = receiptRepository.getReceipt(receiptId).bind().transactionId
-        receiptRepository.delete(receiptId).bind()
-        // Transakcja paragonu nie ma już właściciela — usuń, by nie została jako „osierocony” wpis.
         transactionId?.let { transactionRepository.delete(it).bind() }
+        receiptRepository.delete(receiptId).bind()
         changeNotifier.notifyTransactionsChanged()
     }
 
@@ -165,7 +170,12 @@ class DefaultReceiptService(
                         date = date,
                     )
                     .bind()
-            receiptRepository.linkTransaction(receiptId, txId).bind()
+            // Gdyby podpięcie zawiodło, transakcja zostałaby sierotą (a kolejny ensure utworzyłby
+            // duplikat) — sprzątamy ją, analogicznie do rollbacku zdjęcia w createPendingReceipt.
+            receiptRepository
+                .linkTransaction(receiptId, txId)
+                .onFailure { transactionRepository.delete(txId) }
+                .bind()
             txId
         }
     }
