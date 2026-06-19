@@ -53,6 +53,9 @@ interface Strings {
     val receiptReadyAction: String
     val badgeNew: String
 
+    /** Badge przy paragonie przetworzonym, ale jeszcze niezatwierdzonym (status `ready`). */
+    val receiptUnconfirmedBadge: String
+
     fun entryMetaItems(category: String, items: Int, relativeDay: String): String
 
     fun entryMeta(category: String, relativeDay: String): String

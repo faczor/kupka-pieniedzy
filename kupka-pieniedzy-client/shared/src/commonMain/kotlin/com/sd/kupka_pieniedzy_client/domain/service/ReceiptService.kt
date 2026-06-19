@@ -2,9 +2,9 @@ package com.sd.kupka_pieniedzy_client.domain.service
 
 import com.sd.kupka_pieniedzy_client.core.error.DomainError
 import com.sd.kupka_pieniedzy_client.core.error.ValidationRule
+import com.sd.kupka_pieniedzy_client.core.money.Money
 import com.sd.kupka_pieniedzy_client.core.result.Outcome
 import com.sd.kupka_pieniedzy_client.core.result.onFailure
-import com.sd.kupka_pieniedzy_client.core.result.onSuccess
 import com.sd.kupka_pieniedzy_client.core.result.outcomeBinding
 import com.sd.kupka_pieniedzy_client.core.time.DateProvider
 import com.sd.kupka_pieniedzy_client.domain.event.DataChangeNotifier
@@ -15,6 +15,7 @@ import com.sd.kupka_pieniedzy_client.domain.repository.CategoryRepository
 import com.sd.kupka_pieniedzy_client.domain.repository.ReceiptAnalysisRepository
 import com.sd.kupka_pieniedzy_client.domain.repository.ReceiptRepository
 import com.sd.kupka_pieniedzy_client.domain.repository.TransactionRepository
+import kotlinx.datetime.LocalDate
 
 interface ReceiptService {
     /** Tworzy paragon „w analizie” i wgrywa [image] (JPEG) do Storage. Zwraca id paragonu. */
@@ -86,6 +87,9 @@ class DefaultReceiptService(
                 items = items,
             )
         receiptRepository.markReady(analyzed, raw).bind()
+        // Transakcja powstaje już przy `ready` (nie przy zapisie) — przetworzony paragon od razu
+        // jest widoczny i liczony w feedzie/sumach/budżetach.
+        ensureReceiptTransaction(receiptId, analyzed.total, analyzed.store, analyzed.date).bind()
         changeNotifier.notifyTransactionsChanged()
     }
 
@@ -114,32 +118,64 @@ class DefaultReceiptService(
         if (draft.items.any { it.categoryId == null }) {
             fail(DomainError.Validation(ValidationRule.UnassignedReceiptItems))
         }
-        val categories = categoryRepository.getAll().bind()
-        val groceries =
-            categories.firstOrNull {
-                it.level == 1 && it.name.equals(GROCERIES_L1_NAME, ignoreCase = true)
-            } ?: categoryRepository.getDefault().bind()
-
-        val accountId = accountRepository.getDefaultAccountId().bind()
+        // ensure = auto-heal: transakcja zwykle istnieje już od `ready`, tworzymy ją tylko dla
+        // paragonów sprzed tej zmiany (transaction_id == null).
         val transactionId =
-            transactionRepository
-                .insertReceiptExpense(
-                    categoryId = groceries.id,
-                    accountId = accountId,
-                    amount = draft.total,
-                    merchant = draft.store,
-                    date = draft.date,
-                )
-                .bind()
-
-        // Końcowe kategorie pozycji utrwala finalize w receipt_items; per-kategorię sumy
-        // wyliczają widoki (budget_progress) bezpośrednio z receipt_items — bez tabeli splitów.
+            ensureReceiptTransaction(draft.receiptId, draft.total, draft.store, draft.date).bind()
         receiptRepository.finalize(draft.receiptId, transactionId, draft.items).bind()
         changeNotifier.notifyTransactionsChanged()
     }
 
-    override suspend fun deleteReceipt(receiptId: String): Outcome<Unit> =
-        receiptRepository
-            .delete(receiptId)
-            .onSuccess { changeNotifier.notifyTransactionsChanged() }
+    override suspend fun deleteReceipt(receiptId: String): Outcome<Unit> = outcomeBinding {
+        // Najpierw transakcja, potem paragon — odwrotna kolejność zostawiłaby transakcję-sierotę
+        // (FK `on delete set null`) przy częściowej awarii.
+        val transactionId = receiptRepository.getReceipt(receiptId).bind().transactionId
+        transactionId?.let { transactionRepository.delete(it).bind() }
+        receiptRepository.delete(receiptId).bind()
+        changeNotifier.notifyTransactionsChanged()
+    }
+
+    /**
+     * Gwarantuje, że paragon ma transakcję. Idempotentne: jeśli transakcja już istnieje (np. po
+     * ponownej analizie), aktualizuje jej sumę/sklep/datę; w przeciwnym razie tworzy nową
+     * (kategoria L1 „spożywka” lub domyślna) i podpina ją do paragonu. Zwraca id transakcji.
+     */
+    private suspend fun ensureReceiptTransaction(
+        receiptId: String,
+        total: Money,
+        store: String,
+        date: LocalDate,
+    ): Outcome<String> = outcomeBinding {
+        val existing = receiptRepository.getReceipt(receiptId).bind().transactionId
+        if (existing != null) {
+            transactionRepository.updateReceiptExpense(existing, total, store, date).bind()
+            existing
+        } else {
+            val categoryId = resolveReceiptCategoryId().bind()
+            val accountId = accountRepository.getDefaultAccountId().bind()
+            val txId =
+                transactionRepository
+                    .insertReceiptExpense(
+                        categoryId = categoryId,
+                        accountId = accountId,
+                        amount = total,
+                        merchant = store,
+                        date = date,
+                    )
+                    .bind()
+            receiptRepository
+                .linkTransaction(receiptId, txId)
+                .onFailure { transactionRepository.delete(txId) }
+                .bind()
+            txId
+        }
+    }
+
+    /** Kategoria nagłówka transakcji paragonu: L1 „spożywka”, a w razie braku — domyślna („inne”). */
+    private suspend fun resolveReceiptCategoryId(): Outcome<String> = outcomeBinding {
+        val categories = categoryRepository.getAll().bind()
+        categories
+            .firstOrNull { it.level == 1 && it.name.equals(GROCERIES_L1_NAME, ignoreCase = true) }
+            ?.id ?: categoryRepository.getDefault().bind().id
+    }
 }

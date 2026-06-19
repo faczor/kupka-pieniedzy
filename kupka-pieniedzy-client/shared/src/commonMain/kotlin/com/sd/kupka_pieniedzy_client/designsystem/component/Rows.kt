@@ -1,12 +1,9 @@
 package com.sd.kupka_pieniedzy_client.designsystem.component
 
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -14,7 +11,6 @@ import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import com.sd.kupka_pieniedzy_client.core.money.MoneyFormatter
 import com.sd.kupka_pieniedzy_client.core.time.LocalToday
 import com.sd.kupka_pieniedzy_client.designsystem.format.relativeDayLabel
@@ -97,13 +93,10 @@ fun TransactionRow(entry: RecentEntry, modifier: Modifier = Modifier, showDivide
 @Composable
 private fun NewBadge() {
     val colors = KupkaTheme.colors
-    Text(
+    PillBadge(
         text = LocalStrings.current.badgeNew,
-        style = KupkaTheme.typography.caption.copy(fontSize = 10.sp),
-        color = colors.primaryHover,
-        modifier =
-            Modifier.background(colors.primary.copy(alpha = 0.15f), KupkaTheme.shapes.pillShape)
-                .padding(horizontal = 7.dp, vertical = 1.dp),
+        contentColor = colors.primaryHover,
+        backgroundColor = colors.primary.copy(alpha = 0.15f),
     )
 }
 

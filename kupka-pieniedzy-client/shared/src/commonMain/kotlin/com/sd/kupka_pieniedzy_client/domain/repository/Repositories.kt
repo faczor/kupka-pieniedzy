@@ -61,6 +61,17 @@ interface TransactionRepository {
         merchant: String,
         date: LocalDate,
     ): Outcome<String>
+
+    /** Aktualizuje transakcję paragonu (po ponownej analizie zmienia się suma/sklep/data). */
+    suspend fun updateReceiptExpense(
+        transactionId: String,
+        amount: Money,
+        merchant: String,
+        date: LocalDate,
+    ): Outcome<Unit>
+
+    /** Usuwa transakcję po id (np. przy kasowaniu powiązanego paragonu). */
+    suspend fun delete(transactionId: String): Outcome<Unit>
 }
 
 interface BudgetRepository {
@@ -89,10 +100,20 @@ interface ReceiptRepository {
 
     suspend fun getActive(): Outcome<List<Receipt>>
 
-    /** Paragony zapisane (status `saved`) z datą w okresie — do mapowania transakcja→paragon na liście. */
-    suspend fun getSavedForMonth(start: LocalDate, end: LocalDate): Outcome<List<Receipt>>
+    /**
+     * Paragony z już utworzoną transakcją (status `ready` lub `saved`, `transaction_id` not null)
+     * i datą w okresie — do mapowania transakcja→paragon na liście oraz oznaczenia
+     * „do zatwierdzenia” (ready) vs zatwierdzony (saved).
+     */
+    suspend fun getWithTransactionForMonth(
+        start: LocalDate,
+        end: LocalDate,
+    ): Outcome<List<Receipt>>
 
     suspend fun getReadyOne(): Outcome<Receipt?>
+
+    /** Podpina paragon pod nowo utworzoną transakcję BEZ zmiany statusu (zostaje `ready`). */
+    suspend fun linkTransaction(receiptId: String, transactionId: String): Outcome<Unit>
 
     suspend fun acknowledge(receiptId: String): Outcome<Unit>
 

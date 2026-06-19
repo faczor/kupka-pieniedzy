@@ -42,6 +42,7 @@ import com.sd.kupka_pieniedzy_client.designsystem.component.EntryAmount
 import com.sd.kupka_pieniedzy_client.designsystem.component.EntryRow
 import com.sd.kupka_pieniedzy_client.designsystem.component.ExpandableEntryRow
 import com.sd.kupka_pieniedzy_client.designsystem.component.IconTile
+import com.sd.kupka_pieniedzy_client.designsystem.component.PillBadge
 import com.sd.kupka_pieniedzy_client.designsystem.component.KupkaBottomSheet
 import com.sd.kupka_pieniedzy_client.designsystem.component.KupkaListCard
 import com.sd.kupka_pieniedzy_client.designsystem.component.KupkaProgressBar
@@ -561,6 +562,7 @@ private fun ReceiptRow(
 ) {
     val strings = LocalStrings.current
     val nav = LocalNavigator.current
+    val colors = KupkaTheme.colors
     val categoryColor = parseHexColor(item.category.colorHex)
     // Tylko paragon (z id) jest rozwijalny — zwykłe wpisy nie dostają chevrona.
     val expandable = item.receiptId != null
@@ -574,6 +576,16 @@ private fun ReceiptRow(
         onToggle = onToggle,
         expandedContent = { ReceiptPositions(positions, onToggle) },
         leading = { ReceiptIconTile(item.category.icon, categoryColor) },
+        titleTrailing =
+            if (!item.confirmed)
+                ({
+                    PillBadge(
+                        text = strings.receiptUnconfirmedBadge,
+                        contentColor = colors.budgetYellowFill,
+                        backgroundColor = colors.budgetYellowTrack,
+                    )
+                })
+            else null,
         onClick =
             if (item.receiptId != null) ({ nav.push(Route.Receipt(item.receiptId)) }) else null,
         showDivider = showDivider,

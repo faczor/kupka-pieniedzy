@@ -54,6 +54,7 @@ object PlStrings : Strings {
 
     override val receiptReadyAction = "Zobacz"
     override val badgeNew = "NOWY"
+    override val receiptUnconfirmedBadge = "do zatwierdzenia"
 
     override fun entryMetaItems(category: String, items: Int, relativeDay: String): String {
         val word = plChoosePlural(items, "pozycja", "pozycje", "pozycji")
