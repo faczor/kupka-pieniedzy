@@ -3,6 +3,7 @@ package com.sd.kupka_pieniedzy_client.data.repository
 import com.sd.kupka_pieniedzy_client.core.config.AppConfig
 import com.sd.kupka_pieniedzy_client.core.money.Money
 import com.sd.kupka_pieniedzy_client.core.result.Outcome
+import com.sd.kupka_pieniedzy_client.data.auth.CurrentUserProvider
 import com.sd.kupka_pieniedzy_client.data.dto.BudgetDto
 import com.sd.kupka_pieniedzy_client.data.dto.BudgetProgressDto
 import com.sd.kupka_pieniedzy_client.data.mapper.toDomain
@@ -14,12 +15,13 @@ import kotlinx.datetime.LocalDate
 
 /**
  * Postęp budżetów. Czytamy z widoku `budget_progress` (kategoria + budżet + suma wydana z
- * transakcji bez paragonów rozbitych na pozycje ORAZ z receipt_items per (sub)kategoria,
- * bez double-countingu — patrz migracja 0005).
+ * transakcji bez paragonów rozbitych na pozycje ORAZ z receipt_items per (sub)kategoria, bez
+ * double-countingu — patrz migracja 0005).
  */
 class SupabaseBudgetRepository(
     private val supabase: SupabaseClientProvider,
     private val config: AppConfig,
+    private val currentUser: CurrentUserProvider,
 ) : BudgetRepository {
 
     override suspend fun getProgressForPeriod(
@@ -29,7 +31,7 @@ class SupabaseBudgetRepository(
         runCatchingDomain(supabase.isConfigured) {
             supabase.postgrest
                 .from("budget_progress")
-                .select { filter { eq("user_id", config.userId) } }
+                .select { filter { eq("user_id", currentUser.requireUserId()) } }
                 .decodeList<BudgetProgressDto>()
                 .map { it.toDomain(config.defaultCurrency) }
         }
@@ -42,7 +44,7 @@ class SupabaseBudgetRepository(
                     .from("budgets")
                     .select {
                         filter {
-                            eq("user_id", config.userId)
+                            eq("user_id", currentUser.requireUserId())
                             lte("period_start", end.toString())
                             gte("period_end", start.toString())
                         }

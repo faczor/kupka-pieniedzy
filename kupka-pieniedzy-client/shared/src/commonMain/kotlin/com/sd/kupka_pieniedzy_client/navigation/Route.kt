@@ -40,6 +40,9 @@ sealed interface Route {
 
     /** Szczegół trendu pojedynczego budżetu (drill-in z Przeglądu Trendów). */
     data class TrendsBudgetDetail(val categoryId: String) : Route
+
+    /** Profil — ustawienia konta + wylogowanie (push z awatara na Dashboardzie). */
+    data object Profile : Route
 }
 
 /** Kolejność zakładek w dolnym pasku (Home · Wpisy · Budżety · Szukaj). */

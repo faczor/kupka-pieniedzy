@@ -17,31 +17,43 @@
 - **Brak lokalnej persistencji** (multiplatform-settings/DataStore) — potrzebna do trzymania sesji.
 - **Provisioning usera:** onboarding tworzy kategorie (`CategoryRepository.provisionInitial`), ale `user_settings` + konto domyślne dla `…0001/…0002` są **seedowane migracją** (`0002`, `0012`) — realny nowy user musi je dostać inaczej (trigger, patrz §6).
 
-## 1. Decyzje do podjęcia PRZED kodem (zapytaj Sebastiana)
+## 1. Decyzje — PODJĘTE (2026-06-19)
 
-1. **Sposób logowania (provider flow):**
-   - **(A) `compose-auth` — natywne** (rekomendowane UX): Google przez Credential Manager (Android) / natywnie (iOS), Apple natywnie na iOS, web-fallback Apple na Androidzie. Więcej konfiguracji (serverClientId), lepszy UX, zgodne z wytycznymi Apple/Google.
-   - **(B) OAuth przez przeglądarkę + deep link** (prościej): `supabase.auth.signInWith(Google/Apple) { ... }` otwiera browser/ASWebAuthenticationSession, redirect wraca deep linkiem. Jeden kod na obie platformy, słabszy UX, ale szybciej.
-   - Rekomendacja: **A dla Google, A (iOS) + B (Android) dla Apple** (Apple na Androidzie jest tylko web).
-2. **Strategia danych:** realny user startuje **świeżo** (onboarding go provisionuje) — **bez migracji** danych `…0001/…0002`. Potwierdź, że nie migrujemy istniejących paragonów/transakcji do pierwszego realnego konta. (Jeśli trzeba migrować — osobny, ręczny skrypt SQL mapujący `user_id`.)
-3. **Persistencja sesji:** `multiplatform-settings` (russhwolf) jako backend `SettingsSessionManager` supabase-kt. Potwierdź dodanie zależności.
-4. **Kto robi konfigurację dev** (konta): Sebastian ma App Store/Play + Anthropic; Google Cloud + Apple Developer + Supabase dashboard wymagają jego dostępu (patrz §3).
+> Domknięte z Sebastianem. Poniżej obowiązujący zakres tracku; reszta dokumentu (§2–§13)
+> zaktualizowana pod te decyzje. **Google jest odłożony** — nie wchodzi na start.
+
+1. **Metody logowania (zakres startowy):**
+   - **Email = magic-link / OTP** (bez hasła) — `supabase.auth.signInWith(OTP) { email }` → kod/link → weryfikacja. Brak rejestracji z hasłem, brak resetu hasła. Dostępne na **obu** platformach.
+   - **Apple = natywnie (flow A)** — tylko na **iOS** (`signInWith(IDToken)` z natywnym Apple ID tokenem). Spełnia wytyczną App Store „Sign in with Apple".
+   - **Android:** Apple **ukryte** (brak natywnego Apple na Androidzie; web-fallback świadomie pomijamy) → na Androidzie zostaje **wyłącznie email OTP**.
+   - **Google:** **odłożony poza ten track.** Żadnej konfiguracji Google Cloud / Credential Manager / SHA-1 na start. Dokładamy później (flow A, native) jako osobny etap, gdy będzie potrzebny.
+   - Konsekwencja: ekran logowania renderuje przyciski warunkowo per platforma (iOS: „Zaloguj przez Apple" + „Kod na email"; Android: „Kod na email").
+2. **Strategia danych:** realny user startuje **świeżo** (onboarding go provisionuje) — **bez migracji** danych `…0001/…0002` (to seed/demo, stają się osierocone). Brak skryptu migracyjnego.
+3. **Persistencja sesji:** `multiplatform-settings` (russhwolf) jako backend domyślnego `SettingsSessionManager`. Tokeny trzymane **plaintext** (SharedPreferences / NSUserDefaults) — akceptowalne dla MVP jednoosobowego; szyfrowanie (Keychain / EncryptedSharedPreferences) można dołożyć później bez zmiany kontraktu `AuthService`.
+4. **Konfigurację dev robi Sebastian** (jedyny z dostępem): Supabase dashboard (Email provider + Apple provider) oraz Apple Developer (capability „Sign in with Apple"). **Bez Google Cloud na start.**
+
+### Co to znaczy dla planu (skrót zmian względem wersji pierwotnej)
+- **§2** kurczy się do: Email provider (Supabase, włączony domyślnie) + Apple (Service ID/`.p8` lub natywny App ID) + deep link. **Bez Google Cloud.**
+- **§3** deps: `auth-kt` + `multiplatform-settings` + (flow A iOS Apple) `compose-auth`. **Bez** `androidx.credentials` / `googleid` (to było pod Google).
+- **§5** `signIn(provider)`: obsługa `AuthProvider.Apple` (iOS, IDToken) + nowa ścieżka **email OTP** (poza obecnym enumem — patrz niżej).
+- **Kontrakt `AuthService`:** obecny `signIn(provider: AuthProvider)` nie obejmuje OTP (OTP nie jest „providerem" social). Rozszerzyć o `suspend fun signInWithEmailOtp(email): Outcome<Unit>` + `suspend fun verifyEmailOtp(email, token): Outcome<AuthSession>` (lub magic-link przez deep link). `enum AuthProvider` zostaje `{ Apple }` na start (Google dołożymy później); usuń `Google` albo zostaw zakomentowane jako TODO.
+- **§8** Android: brak przycisku Apple, brak Google native; deep link i tak potrzebny (magic-link wraca deep linkiem, jeśli użyjemy linku zamiast kodu OTP).
 
 ## 2. Konfiguracja zewnętrzna (poza repo — wymaga Sebastiana)
 
+> Zakres startowy: **Email (OTP/magic-link) + Apple**. Google odłożony — pomiń całą konfigurację Google Cloud.
+
 - **Supabase dashboard → Authentication → Providers:**
-  - włącz **Google** (Client ID + Secret z Google Cloud — „Web client"),
-  - włącz **Apple** (Service ID, Team ID, Key ID, `.p8` key),
-  - **Redirect URLs / deep link:** dodaj schemat aplikacji, np. `com.sd.kupka_pieniedzy_client://login-callback` (Site URL + Additional Redirect URLs).
-- **Google Cloud Console → Credentials:** OAuth client IDs:
-  - **Web** (dla Supabase + `serverClientId` compose-auth),
-  - **Android** (package `com.sd.kupka_pieniedzy_client` + SHA-1 debug i release),
-  - **iOS** (bundle `com.pennypile.client` — patrz deploy iOS).
+  - **Email** — włączony domyślnie; ustaw tryb (OTP code / magic link), szablon maila (PL), `OTP expiry`. Brak hasła → możesz wyłączyć „Confirm password" / signup z hasłem.
+  - włącz **Apple** (Service ID, Team ID, Key ID, `.p8` key).
+  - **Redirect URLs / deep link:** dodaj schemat aplikacji, np. `com.sd.kupka_pieniedzy_client://login-callback` (Site URL + Additional Redirect URLs). Potrzebny dla magic-linka i dla Apple. (Jeśli email = **kod OTP** zamiast linka, deep link dla emaila nie jest wymagany — ale Apple iOS i tak go potrzebuje.)
+- ~~**Google Cloud Console**~~ — **POMINIĘTE na start** (Google odłożony). Gdy wróci: Web + Android (SHA-1 debug/release) + iOS OAuth client IDs.
 - **Apple Developer:**
-  - **App ID** z capability „Sign in with Apple",
-  - **Service ID** (dla web/Android flow) + return URL = Supabase callback,
-  - **Sign in with Apple Key** (`.p8`) → do Supabase.
-- **Deep link scheme** spójny w: Supabase redirect, AndroidManifest intent-filter, iOS Info.plist URL types.
+  - **App ID** (`com.pennypile.client`, team `ABJYNW6BYQ`) z capability „Sign in with Apple",
+  - przy natywnym flow A na iOS Service ID nie jest konieczne dla samego iOS; **Sign in with Apple Key (`.p8`)** i tak wgraj do Supabase (Supabase weryfikuje token po stronie serwera).
+- **Deep link:** NIE wymagany dla wybranych przepływów (OTP kod + natywne Apple). Potrzebny dopiero,
+  gdyby włączyć magic-link albo Google web (wtedy: Supabase redirect + AndroidManifest intent-filter
+  + iOS URL types). Patrz §8.
 
 ## 3. Zależności (`gradle/libs.versions.toml` + `shared/build.gradle.kts`)
 
@@ -49,8 +61,8 @@
   - `supabase-auth = { module = "io.github.jan-tennert.supabase:auth-kt" }`
   - (jeśli flow A) `supabase-compose-auth = { module = "io.github.jan-tennert.supabase:compose-auth" }`
   - `multiplatform-settings = { module = "com.russhwolf:multiplatform-settings", version = "1.2.0" }` (+ `multiplatform-settings-no-arg` jeśli użyjesz domyślnego konstruktora — na Androidzie wymaga inicjalizacji Contextem).
-- `shared/build.gradle.kts` → `commonMain.dependencies { implementation(libs.supabase.auth); implementation(libs.multiplatform.settings); /* opc. compose-auth */ }`. Ktor engines (okhttp/darwin) już są.
-- **Android:** Credential Manager (flow A) → `androidx.credentials:credentials` + `androidx.credentials:credentials-play-services-auth` + `com.google.android.libraries.identity.googleid:googleid` w `androidApp` (lub androidMain).
+- `shared/build.gradle.kts` → `commonMain.dependencies { implementation(libs.supabase.auth); implementation(libs.multiplatform.settings); implementation(libs.supabase.compose.auth) /* Apple iOS native */ }`. Ktor engines (okhttp/darwin) już są.
+- **Android:** ~~Credential Manager / `androidx.credentials` / `googleid`~~ — **niepotrzebne na start** (to było pod Google native). Android ma tylko email OTP, bez natywnego social SDK. Dołożymy przy Google.
 
 ## 4. Warstwa data — klient + sesja + userId
 
@@ -97,18 +109,20 @@ Zastąp obecny gating (tylko flaga) trójstanowym:
 - **Returning user** („Zaloguj się") działa naturalnie: po `signIn` `sessionStatus` → Authenticated → onboarding done → Dashboard.
 - **Wylogowanie** (gdzieś w ustawieniach/profilu — nowy ekran lub przycisk): `authService.signOut()` → `sessionStatus` → NotAuthenticated → Welcome.
 
-## 8. Platform-specific (deep link / natywne)
+## 8. Platform-specific (natywne)
 
-- **Android** (`androidApp`):
-  - `AndroidManifest.xml`: `intent-filter` na `MainActivity` z `BROWSABLE` + scheme/host redirectu.
-  - `MainActivity`: `supabase.handleDeeplinks(intent)` w `onCreate`/`onNewIntent`.
-  - Google natywnie: Credential Manager + `serverClientId` (Web OAuth client).
-  - SHA-1 (debug/release) w Google Cloud + Play Console.
+> **Deep linki NIE są potrzebne** dla wybranych przepływów: e-mail = **kod OTP** (wpisywany ręcznie
+> przez `verifyEmailOtp`, bez powrotu linkiem), Apple = **natywne** (AuthenticationServices, bez
+> redirectu webowego). `scheme`/`host` w `install(Auth)` zostają jako forward-compat (gdyby kiedyś
+> doszedł magic-link lub Google web), ale intent-filter / URL types nie są wymagane teraz.
+
+- **Android** (`androidApp`): **bez zmian** — brak Apple (przycisk ukryty), e-mail OTP nie używa
+  deep linku. (Gdy wejdzie Google: Credential Manager + `serverClientId` + SHA-1.)
 - **iOS** (`iosApp`):
-  - `Info.plist`: `CFBundleURLTypes` z URL scheme.
-  - `onOpenURL` / `SceneDelegate` → `supabase.handleDeeplinks(url)`.
-  - **Sign in with Apple** capability + entitlement (`scripts/ios/deploy-ios.sh` używa automatic signing; trzeba dodać capability do App ID `com.pennypile.client`, team `ABJYNW6BYQ`).
-  - Google iOS: reversed client ID URL scheme w Info.plist.
+  - **Sign in with Apple** entitlement — dodane: `iosApp/iosApp/iosApp.entitlements`
+    (`com.apple.developer.applesignin`) + `CODE_SIGN_ENTITLEMENTS` w `Config.xcconfig`.
+  - Wymaga capability „Sign in with Apple" na App ID `com.pennypile.client` (team `ABJYNW6BYQ`) —
+    `deploy-ios.sh` (automatic signing + `-allowProvisioningUpdates`) potrafi to doprovisionować.
 
 ## 9. Migracje Supabase (nowe, forward-only)
 
@@ -164,13 +178,42 @@ Zastąp obecny gating (tylko flaga) trójstanowym:
 
 ## 13. Definicja ukończenia (akceptacja)
 
-- [ ] Świeży, realny user: Google **i** Apple logują (Android + iOS), sesja przeżywa restart.
+- [ ] Świeży, realny user loguje się **kodem e-mail (OTP)** na **iOS i Androidzie**; sesja przeżywa restart.
+- [ ] **iOS:** natywne „Zaloguj przez Apple" działa; **Android:** przycisk Apple ukryty (tylko e-mail).
 - [ ] Po pierwszym logowaniu user ma `user_settings` + konto (trigger), onboarding seeduje kategorie.
 - [ ] Returning user („Zaloguj się") wchodzi prosto na Dashboard.
 - [ ] Wylogowanie wraca na Welcome.
 - [ ] **RLS ON** — user widzi tylko swoje dane; każdy ekran (Dashboard/Wpisy/Kategorie/Trendy/Paragon) działa.
 - [ ] `AppConfig.userId` usunięty; `StubAuthService` usunięty lub za flagą dev.
 - [ ] E2E przeklikane na Androidzie i iOS.
+- [ ] _(odłożone, poza tym trackiem)_ Google login.
+
+## 14. Status implementacji (2026-06-19, branch `feat/auth-supabase`)
+
+### ✅ Zrobione w kodzie (kompiluje się: commonMain metadata + iosSimulatorArm64 + androidDebug)
+- Deps: `auth-kt` + `compose-auth` (`libs.versions.toml`, `shared/build.gradle.kts`).
+- `SupabaseClientProvider`: `install(Auth)` (PKCE, scheme/host forward-compat) + `install(ComposeAuth){ appleNativeLogin() }` + accessory `auth`/`composeAuth`.
+- `AuthService` (kontrakt): `status: StateFlow<AuthStatus>` (Loading/Authenticated/Unauthenticated) + `sendEmailOtp` + `verifyEmailOtp` + `signOut`. `AuthProvider = { Apple }`.
+- `SupabaseAuthService` (OTP + sesja z `sessionStatus`), `StubAuthService` (dev, niebindowany), bind w `DataModule`.
+- `CurrentUserProvider` (auth.uid() + dev-fallback `AppConfig.userId`); 8 repo używa `currentUser.requireUserId()`.
+- Gating w `App.kt`: bramka `AuthStatus` → `AppShell`; spinner na Loading; usunięty `TODO(auth track)`.
+- Ekran logowania: krok e-mail → krok kod (OTP); Apple przez expect/actual (`AppleSignInButton`, iOS = compose-auth, Android = no-op). Stringi PL.
+- `DomainError.AuthCancelled`.
+- iOS: `iosApp.entitlements` (Sign in with Apple) + `CODE_SIGN_ENTITLEMENTS`.
+- Migracje: `0013_handle_new_user.sql`, `0014_storage_auth.sql`, `0015_enable_rls.sql`.
+
+### 🔧 Do zrobienia ręcznie przez Sebastiana (poza repo) — ZANIM zadziała logowanie
+1. **Supabase dashboard → Authentication → Providers → Email:** włączony; ustaw szablon maila PL z kodem (`{{ .Token }}`), `OTP expiry`. (Magic-link niepotrzebny — używamy kodu.)
+2. **Supabase → Providers → Apple:** włącz; wgraj Apple **Sign in with Apple Key (.p8)** + Service ID / Team ID / Key ID.
+3. **Apple Developer:** capability „Sign in with Apple" na App ID `com.pennypile.client` (team `ABJYNW6BYQ`). `deploy-ios.sh` (`-allowProvisioningUpdates`) powinien doprovisionować po dodaniu entitlementu.
+4. **`app_config.json`:** zostaje (supabaseUrl/anonKey). `userId` na razie zostaje jako dev-fallback.
+
+### 🚦 Kolejność wdrożenia migracji (NA KOŃCU RLS)
+- Najpierw `0013` (trigger) + `0014` (storage) — bezpieczne.
+- `0015_enable_rls.sql` **dopiero** gdy: (a) realny login działa E2E, (b) usunięty dev-fallback w `CurrentUserProvider` (inaczej insert z `AppConfig.userId` poleci „violates RLS"). Do tego momentu apka działa na starym userId.
+
+### ⏳ Niezweryfikowane (wymaga realnego configu / urządzenia)
+- Realny round-trip OTP (wysyłka maila + verify), natywny flow Apple na iOS, persystencja sesji po restarcie, trigger provisioningu, RLS E2E. Kod kompiluje się na 3 targetach, ale logiki end-to-end nie dało się odpalić bez kroków 1–3 powyżej.
 
 ---
-_Powiązane: PR #17 (onboarding + atrapa auth, branch `feat/onboarding-flow`), `App.kt` `TODO(auth track)`, `domain/auth/AuthService.kt`._
+_Powiązane: PR #17 (onboarding + atrapa auth, branch `feat/onboarding-flow`), `domain/auth/AuthService.kt`, migracje `0013–0015`._

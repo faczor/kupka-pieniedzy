@@ -2,6 +2,7 @@ package com.sd.kupka_pieniedzy_client.data.repository
 
 import com.sd.kupka_pieniedzy_client.core.config.AppConfig
 import com.sd.kupka_pieniedzy_client.core.result.Outcome
+import com.sd.kupka_pieniedzy_client.data.auth.CurrentUserProvider
 import com.sd.kupka_pieniedzy_client.data.dto.AccountDto
 import com.sd.kupka_pieniedzy_client.data.supabase.SupabaseClientProvider
 import com.sd.kupka_pieniedzy_client.data.supabase.notFound
@@ -14,6 +15,7 @@ import io.github.jan.supabase.postgrest.query.Order
 class SupabaseAccountRepository(
     private val supabase: SupabaseClientProvider,
     private val config: AppConfig,
+    private val currentUser: CurrentUserProvider,
 ) : AccountRepository {
 
     override suspend fun getDefaultAccountId(): Outcome<String> =
@@ -22,7 +24,7 @@ class SupabaseAccountRepository(
                 supabase.postgrest
                     .from("accounts")
                     .select(Columns.list("id")) {
-                        filter { eq("user_id", config.userId) }
+                        filter { eq("user_id", currentUser.requireUserId()) }
                         order("created_at", Order.ASCENDING)
                         limit(1)
                     }

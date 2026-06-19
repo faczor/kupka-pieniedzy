@@ -3,6 +3,7 @@ package com.sd.kupka_pieniedzy_client.data.repository
 import com.sd.kupka_pieniedzy_client.core.config.AppConfig
 import com.sd.kupka_pieniedzy_client.core.result.Outcome
 import com.sd.kupka_pieniedzy_client.core.time.DateProvider
+import com.sd.kupka_pieniedzy_client.data.auth.CurrentUserProvider
 import com.sd.kupka_pieniedzy_client.data.dto.BudgetDto
 import com.sd.kupka_pieniedzy_client.data.dto.CategoryDto
 import com.sd.kupka_pieniedzy_client.data.dto.CategoryInsertDto
@@ -26,6 +27,7 @@ import io.github.jan.supabase.postgrest.query.Order
 class SupabaseCategoryRepository(
     private val supabase: SupabaseClientProvider,
     private val config: AppConfig,
+    private val currentUser: CurrentUserProvider,
     private val dateProvider: DateProvider,
 ) : CategoryRepository {
 
@@ -44,7 +46,7 @@ class SupabaseCategoryRepository(
                     .from("categories")
                     .select {
                         filter {
-                            eq("user_id", config.userId)
+                            eq("user_id", currentUser.requireUserId())
                             eq("id", id)
                         }
                         limit(1)
@@ -60,7 +62,7 @@ class SupabaseCategoryRepository(
                     .from("categories")
                     .select {
                         filter {
-                            eq("user_id", config.userId)
+                            eq("user_id", currentUser.requireUserId())
                             eq("is_default", true)
                         }
                         limit(1)
@@ -73,7 +75,7 @@ class SupabaseCategoryRepository(
         runCatchingDomain(supabase.isConfigured) {
             val insert =
                 CategoryInsertDto(
-                    userId = config.userId,
+                    userId = currentUser.requireUserId(),
                     name = input.name,
                     icon = input.icon,
                     color = input.colorHex,
@@ -93,7 +95,7 @@ class SupabaseCategoryRepository(
                     .from("budgets")
                     .insert(
                         BudgetInsertRow(
-                            userId = config.userId,
+                            userId = currentUser.requireUserId(),
                             categoryId = created.id,
                             amount = budget.toZl(),
                             periodStart = start.toString(),
@@ -118,7 +120,7 @@ class SupabaseCategoryRepository(
                 if (c.name.trim().lowercase() !in existingNames) {
                     rows +=
                         CategoryInsertDto(
-                            userId = config.userId,
+                            userId = currentUser.requireUserId(),
                             name = c.name.trim(),
                             icon = c.icon,
                             color = c.colorHex,
@@ -130,7 +132,7 @@ class SupabaseCategoryRepository(
             if (!hasDefault) {
                 rows +=
                     CategoryInsertDto(
-                        userId = config.userId,
+                        userId = currentUser.requireUserId(),
                         name = default.name.trim(),
                         icon = default.icon,
                         color = default.colorHex,
@@ -149,7 +151,7 @@ class SupabaseCategoryRepository(
                 CategoryPatch(name = input.name, icon = input.icon, color = input.colorHex)
             ) {
                 filter {
-                    eq("user_id", config.userId)
+                    eq("user_id", currentUser.requireUserId())
                     eq("id", id)
                 }
             }
@@ -162,7 +164,7 @@ class SupabaseCategoryRepository(
                     .from("budgets")
                     .insert(
                         BudgetInsertRow(
-                            userId = config.userId,
+                            userId = currentUser.requireUserId(),
                             categoryId = id,
                             amount = budget.toZl(),
                             periodStart = start.toString(),
@@ -176,7 +178,7 @@ class SupabaseCategoryRepository(
                     .from("categories")
                     .select {
                         filter {
-                            eq("user_id", config.userId)
+                            eq("user_id", currentUser.requireUserId())
                             eq("id", id)
                         }
                         limit(1)
@@ -192,7 +194,7 @@ class SupabaseCategoryRepository(
                     .from("transactions")
                     .select(Columns.list("id")) {
                         filter {
-                            eq("user_id", config.userId)
+                            eq("user_id", currentUser.requireUserId())
                             eq("category_id", categoryId)
                         }
                     }
@@ -202,7 +204,7 @@ class SupabaseCategoryRepository(
                     .from("receipt_items")
                     .select(Columns.list("id")) {
                         filter {
-                            eq("user_id", config.userId)
+                            eq("user_id", currentUser.requireUserId())
                             eq("category_id", categoryId)
                         }
                     }
@@ -217,7 +219,7 @@ class SupabaseCategoryRepository(
                     CategoryRefPatch(categoryId = moveEntriesToId)
                 ) {
                     filter {
-                        eq("user_id", config.userId)
+                        eq("user_id", currentUser.requireUserId())
                         eq("category_id", categoryId)
                     }
                 }
@@ -225,20 +227,20 @@ class SupabaseCategoryRepository(
                     CategoryRefPatch(categoryId = moveEntriesToId)
                 ) {
                     filter {
-                        eq("user_id", config.userId)
+                        eq("user_id", currentUser.requireUserId())
                         eq("category_id", categoryId)
                     }
                 }
             }
             supabase.postgrest.from("budgets").delete {
                 filter {
-                    eq("user_id", config.userId)
+                    eq("user_id", currentUser.requireUserId())
                     eq("category_id", categoryId)
                 }
             }
             supabase.postgrest.from("categories").update(CategoryActivePatch(active = false)) {
                 filter {
-                    eq("user_id", config.userId)
+                    eq("user_id", currentUser.requireUserId())
                     eq("id", categoryId)
                 }
             }
@@ -248,7 +250,7 @@ class SupabaseCategoryRepository(
     private suspend fun deleteCurrentBudgets(categoryId: String, start: String, end: String) {
         supabase.postgrest.from("budgets").delete {
             filter {
-                eq("user_id", config.userId)
+                eq("user_id", currentUser.requireUserId())
                 eq("category_id", categoryId)
                 lte("period_start", end)
                 gte("period_end", start)
@@ -261,7 +263,7 @@ class SupabaseCategoryRepository(
             .from("categories")
             .select {
                 filter {
-                    eq("user_id", config.userId)
+                    eq("user_id", currentUser.requireUserId())
                     eq("active", true)
                 }
                 order("name", Order.ASCENDING)
@@ -276,7 +278,7 @@ class SupabaseCategoryRepository(
                 .from("budgets")
                 .select {
                     filter {
-                        eq("user_id", config.userId)
+                        eq("user_id", currentUser.requireUserId())
                         lte("period_start", today)
                         gte("period_end", today)
                     }

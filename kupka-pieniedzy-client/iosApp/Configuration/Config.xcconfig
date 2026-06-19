@@ -3,6 +3,10 @@ TEAM_ID=ABJYNW6BYQ
 PRODUCT_NAME=kupka-pieniedzy-client
 PRODUCT_BUNDLE_IDENTIFIER=com.pennypile.client
 
+// Sign in with Apple — entitlement dla natywnego logowania Apple (auth track #6).
+// Ścieżka względem SRCROOT (katalog z iosApp.xcodeproj).
+CODE_SIGN_ENTITLEMENTS=iosApp/iosApp.entitlements
+
 // Wersja — NIE edytuj tutaj. Synchronizowane z ../version.properties przez deploy-ios.sh.
-CURRENT_PROJECT_VERSION=7
-MARKETING_VERSION=1.0.5
+CURRENT_PROJECT_VERSION=8
+MARKETING_VERSION=1.0.7

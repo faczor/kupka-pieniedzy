@@ -12,6 +12,7 @@ import com.sd.kupka_pieniedzy_client.feature.onboarding.OnboardingFirstEntryScre
 import com.sd.kupka_pieniedzy_client.feature.onboarding.OnboardingLoginScreen
 import com.sd.kupka_pieniedzy_client.feature.onboarding.OnboardingWelcomeScreen
 import com.sd.kupka_pieniedzy_client.feature.placeholder.PlaceholderScreen
+import com.sd.kupka_pieniedzy_client.feature.profile.ProfileScreen
 import com.sd.kupka_pieniedzy_client.feature.receipt.ReceiptScreen
 import com.sd.kupka_pieniedzy_client.feature.trends.TrendsBudgetDetailScreen
 import com.sd.kupka_pieniedzy_client.feature.trends.TrendsScreen
@@ -38,6 +39,7 @@ fun AppNavHost() {
             is Route.Receipt -> ReceiptScreen(route.receiptId)
             Route.Trends -> TrendsScreen()
             is Route.TrendsBudgetDetail -> TrendsBudgetDetailScreen(route.categoryId)
+            Route.Profile -> ProfileScreen()
         }
     }
 }

@@ -28,6 +28,7 @@ import com.sd.kupka_pieniedzy_client.feature.entries.EntriesViewModel
 import com.sd.kupka_pieniedzy_client.feature.onboarding.OnboardingCategoriesViewModel
 import com.sd.kupka_pieniedzy_client.feature.onboarding.OnboardingFinishViewModel
 import com.sd.kupka_pieniedzy_client.feature.onboarding.OnboardingLoginViewModel
+import com.sd.kupka_pieniedzy_client.feature.profile.ProfileViewModel
 import com.sd.kupka_pieniedzy_client.feature.receipt.ReceiptViewModel
 import com.sd.kupka_pieniedzy_client.feature.trends.TrendsBudgetDetailViewModel
 import com.sd.kupka_pieniedzy_client.feature.trends.TrendsViewModel
@@ -67,6 +68,7 @@ val presentationModule: Module = module {
     viewModelOf(::CategoriesViewModel)
     viewModelOf(::ReceiptViewModel)
     viewModelOf(::OnboardingLoginViewModel)
+    viewModelOf(::ProfileViewModel)
     viewModelOf(::OnboardingCategoriesViewModel)
     viewModelOf(::OnboardingFinishViewModel)
 }

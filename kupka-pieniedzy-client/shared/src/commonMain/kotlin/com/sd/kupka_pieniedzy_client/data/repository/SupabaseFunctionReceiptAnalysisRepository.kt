@@ -6,6 +6,7 @@ import com.sd.kupka_pieniedzy_client.core.logging.AppLog
 import com.sd.kupka_pieniedzy_client.core.logging.action
 import com.sd.kupka_pieniedzy_client.core.money.Money
 import com.sd.kupka_pieniedzy_client.core.result.Outcome
+import com.sd.kupka_pieniedzy_client.data.auth.CurrentUserProvider
 import com.sd.kupka_pieniedzy_client.data.dto.AnalyzeReceiptRequest
 import com.sd.kupka_pieniedzy_client.data.dto.AnalyzeReceiptResponse
 import com.sd.kupka_pieniedzy_client.data.dto.FunctionError
@@ -27,15 +28,17 @@ import io.ktor.http.isSuccess
 import kotlinx.serialization.json.Json
 
 /**
- * Realna analiza paragonu — wywołuje Edge Function `analyze-receipt` (Haiku vision + kategoryzacja).
- * Zdjęcie wskazujemy ścieżką w Storage (`imagePath` w bucketcie `receipts`) — funkcja pobiera je
- * service_role keyem. Odpowiedź (grosze, kategoria po nazwie) mapujemy na domenowe [RawReceiptAnalysis].
+ * Realna analiza paragonu — wywołuje Edge Function `analyze-receipt` (Haiku vision +
+ * kategoryzacja). Zdjęcie wskazujemy ścieżką w Storage (`imagePath` w bucketcie `receipts`) —
+ * funkcja pobiera je service_role keyem. Odpowiedź (grosze, kategoria po nazwie) mapujemy na
+ * domenowe [RawReceiptAnalysis].
  *
  * Auth: brak pluginu Auth w MVP — uwierzytelniamy anon keyem (ważny JWT projektu), co przechodzi
  * `verify_jwt = true` funkcji.
  */
 class SupabaseFunctionReceiptAnalysisRepository(
     private val config: AppConfig,
+    private val currentUser: CurrentUserProvider,
     private val httpClient: HttpClient,
 ) : ReceiptAnalysisRepository {
 
@@ -51,11 +54,11 @@ class SupabaseFunctionReceiptAnalysisRepository(
         runCatchingDomain(config.isSupabaseConfigured) {
             AppLog.action(
                 "ReceiptAnalysis.analyze",
-                "imagePath=$imagePath userId=${config.userId} -> $endpoint",
+                "imagePath=$imagePath userId=${currentUser.requireUserId()} -> $endpoint",
             )
             val request =
                 AnalyzeReceiptRequest(
-                    userId = config.userId,
+                    userId = currentUser.requireUserId(),
                     currency = config.defaultCurrency,
                     imagePath = imagePath,
                     bucket = RECEIPTS_BUCKET,
@@ -83,15 +86,18 @@ class SupabaseFunctionReceiptAnalysisRepository(
      */
     private fun functionError(status: Int, body: String): DomainException {
         val parsed =
-            runCatching { json.decodeFromString(FunctionError.serializer(), body).error }.getOrNull()
+            runCatching { json.decodeFromString(FunctionError.serializer(), body).error }
+                .getOrNull()
         val code = parsed?.code
         val message = parsed?.message
         AppLog.w(
             "ReceiptAnalysis.analyze FAILED -> HTTP $status, code=${code ?: "?"}, " +
                 "server=${message ?: body.take(500)}"
         )
-        // Stabilny `code` Edge Function (typ błędu) niesiemy w `Unknown.cause` — serwis mapuje go na
-        // ReceiptFailureReason. Dla 5xx (analysis_failed/internal) zostaje Server → powód „Unknown".
+        // Stabilny `code` Edge Function (typ błędu) niesiemy w `Unknown.cause` — serwis mapuje go
+        // na
+        // ReceiptFailureReason. Dla 5xx (analysis_failed/internal) zostaje Server → powód
+        // „Unknown".
         val error =
             if (status >= 500) DomainError.Server(status)
             else DomainError.Unknown(cause = code ?: message ?: "Edge function HTTP $status")

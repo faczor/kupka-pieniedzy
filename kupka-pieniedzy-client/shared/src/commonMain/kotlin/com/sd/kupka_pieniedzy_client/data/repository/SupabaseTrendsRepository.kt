@@ -3,6 +3,7 @@ package com.sd.kupka_pieniedzy_client.data.repository
 import com.sd.kupka_pieniedzy_client.core.config.AppConfig
 import com.sd.kupka_pieniedzy_client.core.result.Outcome
 import com.sd.kupka_pieniedzy_client.core.time.DateProvider
+import com.sd.kupka_pieniedzy_client.data.auth.CurrentUserProvider
 import com.sd.kupka_pieniedzy_client.data.dto.BudgetDto
 import com.sd.kupka_pieniedzy_client.data.dto.CategoryDto
 import com.sd.kupka_pieniedzy_client.data.dto.CategoryMonthSpendDto
@@ -30,6 +31,7 @@ import kotlinx.datetime.minus
 class SupabaseTrendsRepository(
     private val supabase: SupabaseClientProvider,
     private val config: AppConfig,
+    private val currentUser: CurrentUserProvider,
     private val dateProvider: DateProvider,
 ) : TrendsRepository {
 
@@ -39,8 +41,16 @@ class SupabaseTrendsRepository(
     override suspend fun getMonthlyTotals(window: Int): Outcome<List<MonthTotal>> =
         runCatchingDomain(supabase.isConfigured) {
             val starts = windowMonthStarts(window)
-            val byMonth = fetchMonthTotals(starts.first()).associate { LocalDate.parse(it.monthStart) to it.spent }
-            starts.map { ms -> MonthTotal(month = monthNumber(ms), amount = (byMonth[ms] ?: 0.0).zlToMoney(currency)) }
+            val byMonth =
+                fetchMonthTotals(starts.first()).associate {
+                    LocalDate.parse(it.monthStart) to it.spent
+                }
+            starts.map { ms ->
+                MonthTotal(
+                    month = monthNumber(ms),
+                    amount = (byMonth[ms] ?: 0.0).zlToMoney(currency),
+                )
+            }
         }
 
     override suspend fun getBudgetHistories(window: Int): Outcome<List<BudgetHistory>> =
@@ -50,14 +60,19 @@ class SupabaseTrendsRepository(
             val spendByCategory: Map<String, Map<LocalDate, Double>> =
                 fetchCategoryMonthSpend(starts.first())
                     .groupBy { it.categoryId }
-                    .mapValues { (_, rows) -> rows.associate { LocalDate.parse(it.monthStart) to it.spent } }
+                    .mapValues { (_, rows) ->
+                        rows.associate { LocalDate.parse(it.monthStart) to it.spent }
+                    }
 
             val categoryById = fetchActiveCategories().associateBy { it.id }
             val limitByCategory = fetchCurrentBudgets()
 
-            // Kandydaci: kategorie z wydatkami w oknie LUB z aktywnym budżetem (znane w `categories`).
+            // Kandydaci: kategorie z wydatkami w oknie LUB z aktywnym budżetem (znane w
+            // `categories`).
             val candidateIds =
-                (spendByCategory.keys + limitByCategory.keys).filter { categoryById.containsKey(it) }
+                (spendByCategory.keys + limitByCategory.keys).filter {
+                    categoryById.containsKey(it)
+                }
 
             candidateIds
                 .map { id ->
@@ -65,7 +80,10 @@ class SupabaseTrendsRepository(
                     val perMonth = spendByCategory[id].orEmpty()
                     val monthly =
                         starts.map { ms ->
-                            MonthTotal(month = monthNumber(ms), amount = (perMonth[ms] ?: 0.0).zlToMoney(currency))
+                            MonthTotal(
+                                month = monthNumber(ms),
+                                amount = (perMonth[ms] ?: 0.0).zlToMoney(currency),
+                            )
                         }
                     val history =
                         BudgetHistory(
@@ -87,7 +105,10 @@ class SupabaseTrendsRepository(
         runCatchingDomain(supabase.isConfigured) {
             val today = dateProvider.today()
             val monthStart = LocalDate(today.year, today.month, 1)
-            val spent = fetchMonthTotals(monthStart).firstOrNull { it.monthStart == monthStart.toString() }?.spent
+            val spent =
+                fetchMonthTotals(monthStart)
+                    .firstOrNull { it.monthStart == monthStart.toString() }
+                    ?.spent
             InProgressMonth(
                 month = monthNumber(monthStart),
                 spentSoFar = (spent ?: 0.0).zlToMoney(currency),
@@ -102,7 +123,7 @@ class SupabaseTrendsRepository(
             .from("month_total_spend")
             .select {
                 filter {
-                    eq("user_id", config.userId)
+                    eq("user_id", currentUser.requireUserId())
                     gte("month_start", from.toString())
                 }
             }
@@ -113,7 +134,7 @@ class SupabaseTrendsRepository(
             .from("category_month_spend")
             .select {
                 filter {
-                    eq("user_id", config.userId)
+                    eq("user_id", currentUser.requireUserId())
                     gte("month_start", from.toString())
                 }
             }
@@ -124,7 +145,7 @@ class SupabaseTrendsRepository(
             .from("categories")
             .select {
                 filter {
-                    eq("user_id", config.userId)
+                    eq("user_id", currentUser.requireUserId())
                     eq("active", true)
                 }
             }
@@ -137,7 +158,7 @@ class SupabaseTrendsRepository(
             .from("budgets")
             .select {
                 filter {
-                    eq("user_id", config.userId)
+                    eq("user_id", currentUser.requireUserId())
                     lte("period_start", today)
                     gte("period_end", today)
                 }
@@ -153,7 +174,9 @@ class SupabaseTrendsRepository(
     private fun windowMonthStarts(window: Int): List<LocalDate> {
         val today = dateProvider.today()
         val firstOfThisMonth = LocalDate(today.year, today.month, 1)
-        return (window - 1 downTo 0).map { back -> firstOfThisMonth.minus(DatePeriod(months = back)) }
+        return (window - 1 downTo 0).map { back ->
+            firstOfThisMonth.minus(DatePeriod(months = back))
+        }
     }
 
     private fun monthNumber(date: LocalDate): Int = date.month.ordinal + 1

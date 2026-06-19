@@ -16,6 +16,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.backhandler.BackHandler
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.sd.kupka_pieniedzy_client.core.config.AppConfig
 import com.sd.kupka_pieniedzy_client.core.config.AppConfigLoader
 import com.sd.kupka_pieniedzy_client.core.platform.rememberAppExit
@@ -30,6 +31,8 @@ import com.sd.kupka_pieniedzy_client.designsystem.theme.KupkaTheme
 import com.sd.kupka_pieniedzy_client.di.appModule
 import com.sd.kupka_pieniedzy_client.di.domainModule
 import com.sd.kupka_pieniedzy_client.di.presentationModule
+import com.sd.kupka_pieniedzy_client.domain.auth.AuthService
+import com.sd.kupka_pieniedzy_client.domain.auth.AuthStatus
 import com.sd.kupka_pieniedzy_client.domain.service.OnboardingService
 import com.sd.kupka_pieniedzy_client.localization.AppLanguage
 import com.sd.kupka_pieniedzy_client.localization.LocalStrings
@@ -75,38 +78,58 @@ fun App() {
 }
 
 /**
- * Korzeń UI po konfiguracji + Koinie. Decyduje o starcie — onboarding vs Dashboard — na podstawie
- * flagi `onboarding_completed` (`user_settings`), po czym buduje [Navigator] i renderuje resztę.
+ * Korzeń UI po konfiguracji + Koinie. Bramkuje start stanem autoryzacji:
+ * - [AuthStatus.Loading] (GoTrue odtwarza sesję) → spinner, bez migania ekranem logowania,
+ * - [AuthStatus.Unauthenticated] → onboarding od powitania (zawiera „Zaloguj się"),
+ * - [AuthStatus.Authenticated] → flaga `onboarding_completed` decyduje: Dashboard vs reszta
+ *   onboardingu.
+ *
+ * Zmiana stanu (logowanie/wylogowanie) przebudowuje [AppShell] od korzenia — returning user wchodzi
+ * na Dashboard, wylogowanie wraca na powitanie.
+ */
+@Composable
+private fun AppRoot() {
+    val authService = koinInject<AuthService>()
+    val onboardingService = koinInject<OnboardingService>()
+    val authStatus by authService.status.collectAsStateWithLifecycle()
+
+    when (val status = authStatus) {
+        AuthStatus.Loading -> FullScreenSpinner()
+        AuthStatus.Unauthenticated -> AppShell(Route.OnboardingWelcome)
+        is AuthStatus.Authenticated -> {
+            val startRoute by
+                produceState<Route?>(initialValue = null, status.session.userId) {
+                    value =
+                        when (val outcome = onboardingService.isCompleted()) {
+                            is Outcome.Success ->
+                                if (outcome.value) Route.Dashboard else Route.OnboardingCategories
+                            // Błąd odczytu flagi nie może zablokować aplikacji — wpuszczamy na
+                            // Dashboard.
+                            is Outcome.Failure -> Route.Dashboard
+                        }
+                }
+            val start = startRoute
+            if (start == null) FullScreenSpinner() else AppShell(start)
+        }
+    }
+}
+
+@Composable
+private fun FullScreenSpinner() {
+    Box(
+        modifier = Modifier.fillMaxSize().background(KupkaTheme.colors.surfaceBg),
+        contentAlignment = Alignment.Center,
+    ) {
+        CircularProgressIndicator(color = KupkaTheme.colors.primary)
+    }
+}
+
+/**
+ * Powłoka aplikacji: [Navigator] + NavHost + globalne overlaye. Start zależy od bramki w [AppRoot].
  */
 @OptIn(ExperimentalComposeUiApi::class)
 @Composable
-private fun AppRoot() {
-    val onboardingService = koinInject<OnboardingService>()
-    // TODO(auth track): gdy wejdzie prawdziwy Auth, start ma zależeć też od sesji
-    //  (AuthService.session/userId), nie tylko od flagi onboardingu — inaczej ścieżka „Zaloguj się"
-    //  (returning user) i wylogowanie pozostaną martwe.
-    val startRoute by
-        produceState<Route?>(initialValue = null) {
-            value =
-                when (val outcome = onboardingService.isCompleted()) {
-                    is Outcome.Success ->
-                        if (outcome.value) Route.Dashboard else Route.OnboardingWelcome
-                    // Błąd odczytu flagi nie może zablokować aplikacji — wpuszczamy na Dashboard.
-                    is Outcome.Failure -> Route.Dashboard
-                }
-        }
-
-    val start = startRoute
-    if (start == null) {
-        Box(
-            modifier = Modifier.fillMaxSize().background(KupkaTheme.colors.surfaceBg),
-            contentAlignment = Alignment.Center,
-        ) {
-            CircularProgressIndicator(color = KupkaTheme.colors.primary)
-        }
-        return
-    }
-
+private fun AppShell(start: Route) {
     val navigator = remember(start) { Navigator(start) }
     val today = remember { SystemDateProvider().today() }
     val strings = LocalStrings.current
