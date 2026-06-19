@@ -83,6 +83,16 @@ object PlStrings : Strings {
     }
 
     override val analyzingReceipt = "Analizuję paragon…"
+
+    override val analyzingSheetSubtitle =
+        "Paragon jest jeszcze przetwarzany. Jeśli utknął, zrestartuj — albo anuluj, jeśli to pomyłka."
+    override val analyzingActionReanalyze = "Ponów od nowa"
+    override val analyzingActionReanalyzeSubtitle = "Zrestartuj analizę, gdy utknęła"
+    override val analyzingActionShowImage = "Pokaż zdjęcie"
+    override val analyzingActionShowImageSubtitle = "Zobacz, co jest analizowane"
+    override val analyzingActionCancel = "Anuluj i usuń z kolejki"
+    override val imageLoadError = "Nie udało się wczytać zdjęcia"
+
     override val othersLabel = "inne"
     override val emptyEntriesTitle = "Brak wpisów"
     override val emptyEntriesSubtitle = "W tym miesiącu nie ma jeszcze wydatków"

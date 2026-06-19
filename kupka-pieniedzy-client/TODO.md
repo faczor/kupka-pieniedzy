@@ -11,20 +11,26 @@
       Zalecany SQL (unikalny indeks + `updated_at`) jest w
       `supabase/functions/analyze-receipt/README.md`.
 
-- [ ] **Ponowna analiza paragonu (`reanalyze`) — WYŁĄCZONA.**
-      `ReceiptViewModel.reanalyze` pokazuje tylko toast. Powód: w wariancie base64 nie
-      przechowujemy zdjęcia, więc nie ma czego ponownie wysłać. Przywrócić po wdrożeniu
-      Storage albo po dodaniu flow „re-pick" na ekranie review.
+- [x] **Ponowna analiza paragonu (`reanalyze`) — WŁĄCZONA.** Po wdrożeniu Storage zdjęcie
+      jest trwałe, więc `ReceiptService.reanalyze` (markPending → analiza po `image_path`)
+      działa z poziomu ekranu paragonu i arkusza „w toku" na liście Wpisy. (branch
+      `feature/receipt-image-storage`).
+
+## Decyzje podjęte
+
+- [x] **Zdjęcie: base64 → Storage.** Wybrano Storage. Zdjęcie (znormalizowany JPEG) ląduje
+      w prywatnym buckecie `receipts` (`<user_id>/<receipt_id>.jpg`, migracja `0007`),
+      a do Edge Function idzie `image_path` zamiast base64 (funkcja czyta przez
+      service_role). Odblokowuje reanalyze + podgląd zdjęcia.
 
 ## Decyzje do podjęcia
 
-- [ ] **Zdjęcie: base64 vs Storage.** Teraz wysyłamy base64 inline (proste, bez bucketu
-      i bez Auth). Storage daje trwałe zdjęcie (audyt, `image_path`, reanalyze), ale
-      wymaga prywatnego bucketu `receipts` + polityki RLS dla anon. Rozstrzygnąć przy
-      wdrażaniu realnego logowania.
-
-- [ ] **Auth.** MVP używa anon key (przechodzi `verify_jwt` funkcji) i hardcoded
-      `userId`. Docelowo realne logowanie + włączenie RLS na tabelach.
+- [ ] **Auth + zacieśnienie RLS Storage.** MVP używa anon key i hardcoded `userId`.
+      Polityki `storage.objects` na buckecie `receipts` są celowo permisywne dla roli
+      `anon` (NIE zawężają po `(storage.foldername(name))[1]`), więc każdy z anon keyem
+      czyta/usuwa cudze zdjęcia — spójne z RLS-off na tabelach (D17), ale to dług
+      bezpieczeństwa do spłaty wraz z realnym logowaniem (zawęzić `using` do
+      `auth.uid()::text = (storage.foldername(name))[1]`).
 
 ## Weryfikacja
 

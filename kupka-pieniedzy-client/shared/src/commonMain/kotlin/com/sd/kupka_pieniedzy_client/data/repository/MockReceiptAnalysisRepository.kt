@@ -19,7 +19,7 @@ import kotlinx.coroutines.delay
  */
 class MockReceiptAnalysisRepository(private val config: AppConfig) : ReceiptAnalysisRepository {
 
-    override suspend fun analyze(image: ByteArray): Outcome<RawReceiptAnalysis> {
+    override suspend fun analyze(imagePath: String): Outcome<RawReceiptAnalysis> {
         delay(2500) // udajemy asynchroniczne wywołanie Edge Function
 
         val currency = config.defaultCurrency

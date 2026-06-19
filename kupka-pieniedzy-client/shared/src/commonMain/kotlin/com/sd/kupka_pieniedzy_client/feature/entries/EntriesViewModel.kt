@@ -6,13 +6,17 @@ import com.sd.kupka_pieniedzy_client.core.logging.AppLog
 import com.sd.kupka_pieniedzy_client.core.logging.action
 import com.sd.kupka_pieniedzy_client.core.logging.failure
 import com.sd.kupka_pieniedzy_client.core.presentation.ScreenState
+import com.sd.kupka_pieniedzy_client.core.presentation.ToastController
+import com.sd.kupka_pieniedzy_client.core.presentation.ToastMessage
 import com.sd.kupka_pieniedzy_client.core.result.fold
+import com.sd.kupka_pieniedzy_client.core.result.onFailure
 import com.sd.kupka_pieniedzy_client.core.time.DateProvider
 import com.sd.kupka_pieniedzy_client.domain.event.DataChangeNotifier
 import com.sd.kupka_pieniedzy_client.domain.model.EntriesSnapshot
 import com.sd.kupka_pieniedzy_client.domain.model.EntrySort
 import com.sd.kupka_pieniedzy_client.domain.model.ReceiptPositionItem
 import com.sd.kupka_pieniedzy_client.domain.service.EntriesService
+import com.sd.kupka_pieniedzy_client.domain.service.ReceiptService
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -24,10 +28,21 @@ data class ExpandedReceipt(
     val positions: ScreenState<List<ReceiptPositionItem>>,
 )
 
+/**
+ * Arkusz „w toku” dla paragonu w analizie. [preview] == null → arkusz akcji;
+ * [preview] != null → podgląd zapisanego zdjęcia (Loading/Content/Error).
+ */
+data class AnalyzingSheetState(
+    val receiptId: String,
+    val preview: ScreenState<ByteArray>? = null,
+)
+
 class EntriesViewModel(
     private val entriesService: EntriesService,
+    private val receiptService: ReceiptService,
     dateProvider: DateProvider,
     changeNotifier: DataChangeNotifier,
+    private val toast: ToastController,
 ) : ViewModel() {
 
     private val today = dateProvider.today()
@@ -41,6 +56,9 @@ class EntriesViewModel(
 
     private val _expanded = MutableStateFlow<ExpandedReceipt?>(null)
     val expanded: StateFlow<ExpandedReceipt?> = _expanded.asStateFlow()
+
+    private val _analyzingSheet = MutableStateFlow<AnalyzingSheetState?>(null)
+    val analyzingSheet: StateFlow<AnalyzingSheetState?> = _analyzingSheet.asStateFlow()
 
     init {
         load()
@@ -114,6 +132,70 @@ class EntriesViewModel(
                 _expanded.value = ExpandedReceipt(receiptId, result)
             }
         }
+    }
+
+    // --- arkusz „w toku” (paragon w analizie) ---
+
+    fun openAnalyzingSheet(receiptId: String) {
+        _analyzingSheet.value = AnalyzingSheetState(receiptId)
+    }
+
+    fun closeAnalyzingSheet() {
+        _analyzingSheet.value = null
+    }
+
+    /** Ponów analizę utkniętego paragonu (wróci do „w analizie”). */
+    fun reanalyzeAnalyzing() {
+        val id = _analyzingSheet.value?.receiptId ?: return
+        _analyzingSheet.value = null
+        AppLog.action("Entries.reanalyze", "receiptId=$id")
+        viewModelScope.launch {
+            receiptService.reanalyze(id).onFailure {
+                AppLog.failure("Entries.reanalyze", it)
+                toast.show(ToastMessage.ReceiptReanalyzeFailed)
+            }
+        }
+    }
+
+    /** Anuluj i usuń paragon z kolejki (np. wrzucono zły plik). */
+    fun cancelAnalyzing() {
+        val id = _analyzingSheet.value?.receiptId ?: return
+        _analyzingSheet.value = null
+        AppLog.action("Entries.cancelAnalysis", "receiptId=$id")
+        viewModelScope.launch {
+            receiptService.deleteReceipt(id).onFailure {
+                AppLog.failure("Entries.cancelAnalysis", it)
+                toast.show(ToastMessage.ReceiptDeleteFailed)
+            }
+        }
+    }
+
+    /** Pokaż zapisane zdjęcie analizowanego paragonu (podgląd nad arkuszem). */
+    fun showAnalyzingImage() {
+        val id = _analyzingSheet.value?.receiptId ?: return
+        _analyzingSheet.value = AnalyzingSheetState(id, preview = ScreenState.Loading)
+        AppLog.action("Entries.showImage", "receiptId=$id")
+        viewModelScope.launch {
+            val result =
+                receiptService
+                    .getReceiptImage(id)
+                    .fold(
+                        onSuccess = { ScreenState.Content(it) },
+                        onFailure = {
+                            AppLog.failure("Entries.showImage", it)
+                            ScreenState.Error(it)
+                        },
+                    )
+            if (_analyzingSheet.value?.receiptId == id) {
+                _analyzingSheet.value = AnalyzingSheetState(id, preview = result)
+            }
+        }
+    }
+
+    /** Zamknij podgląd zdjęcia — wróć do arkusza akcji. */
+    fun closeImagePreview() {
+        val id = _analyzingSheet.value?.receiptId ?: return
+        _analyzingSheet.value = AnalyzingSheetState(id)
     }
 
     private fun reload(showLoading: Boolean) {

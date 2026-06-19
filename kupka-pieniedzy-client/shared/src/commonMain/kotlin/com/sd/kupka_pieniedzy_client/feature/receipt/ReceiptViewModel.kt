@@ -139,7 +139,20 @@ class ReceiptViewModel(
     }
 
     fun reanalyze() {
-        // Wyłączone w wariancie base64 (zdjęcie nieprzechowywane) — patrz TODO.md.
-        toast.show(ToastMessage.ReceiptReanalyzeFailed)
+        val id = receiptId ?: return
+        AppLog.action("Receipt.reanalyze", "receiptId=$id")
+        _state.update { it.copy(loading = true, loadError = null) }
+        viewModelScope.launch {
+            receiptService
+                .reanalyze(id)
+                .fold(
+                    onSuccess = { load(id) }, // przeładuj draft po ponownej analizie
+                    onFailure = { e ->
+                        AppLog.failure("Receipt.reanalyze", e)
+                        _state.update { it.copy(loading = false) }
+                        toast.show(ToastMessage.ReceiptReanalyzeFailed)
+                    },
+                )
+        }
     }
 }

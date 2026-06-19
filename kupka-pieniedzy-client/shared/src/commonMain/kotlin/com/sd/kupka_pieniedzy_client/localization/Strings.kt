@@ -73,6 +73,16 @@ interface Strings {
     fun receiptRowMeta(items: Int): String
 
     val analyzingReceipt: String
+
+    // Arkusz „w toku” (tap w wiersz paragonu w analizie).
+    val analyzingSheetSubtitle: String
+    val analyzingActionReanalyze: String
+    val analyzingActionReanalyzeSubtitle: String
+    val analyzingActionShowImage: String
+    val analyzingActionShowImageSubtitle: String
+    val analyzingActionCancel: String
+    val imageLoadError: String
+
     val othersLabel: String
     val emptyEntriesTitle: String
     val emptyEntriesSubtitle: String
