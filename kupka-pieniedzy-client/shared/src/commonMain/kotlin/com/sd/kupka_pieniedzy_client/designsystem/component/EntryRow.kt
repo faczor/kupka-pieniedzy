@@ -99,6 +99,25 @@ fun EntryRow(
     }
 }
 
+/** Mały „pigułkowy” badge w wierszu (np. „NOWY”, „do zatwierdzenia”). Render przez [AppText]. */
+@Composable
+fun PillBadge(
+    text: String,
+    contentColor: Color,
+    backgroundColor: Color,
+    modifier: Modifier = Modifier,
+) {
+    AppText(
+        text = text,
+        variant = TextVariant.Caption,
+        color = contentColor,
+        modifier =
+            modifier
+                .background(backgroundColor, KupkaTheme.shapes.pillShape)
+                .padding(horizontal = 7.dp, vertical = 1.dp),
+    )
+}
+
 /** Kwota wpisu — jedyne źródło logiki koloru/znaku: zwrot/przychód = zielony „+”, reszta neutralna. */
 @Composable
 fun EntryAmount(amount: Money, type: TransactionType, modifier: Modifier = Modifier) {
@@ -132,6 +151,7 @@ fun ExpandableEntryRow(
     expandedContent: @Composable () -> Unit,
     modifier: Modifier = Modifier,
     leading: (@Composable () -> Unit)? = null,
+    titleTrailing: (@Composable () -> Unit)? = null,
     metaIcon: String? = null,
     metaIconColor: Color = Color.Unspecified,
     showDivider: Boolean = true,
@@ -144,6 +164,7 @@ fun ExpandableEntryRow(
         EntryRow(
             title = title,
             meta = meta,
+            titleTrailing = titleTrailing,
             trailing = {
                 Row(
                     verticalAlignment = Alignment.CenterVertically,

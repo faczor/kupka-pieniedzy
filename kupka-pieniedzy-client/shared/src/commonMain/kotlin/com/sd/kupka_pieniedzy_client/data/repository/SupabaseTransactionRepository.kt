@@ -134,4 +134,46 @@ class SupabaseTransactionRepository(
                 .decodeSingle<TransactionDto>()
                 .id
         }
+
+    override suspend fun updateReceiptExpense(
+        transactionId: String,
+        amount: Money,
+        merchant: String,
+        date: LocalDate,
+    ): Outcome<Unit> =
+        runCatchingDomain(supabase.isConfigured) {
+            supabase.postgrest
+                .from("transactions")
+                .update(
+                    ReceiptExpensePatch(
+                        amount = amount.toZl(),
+                        merchant = merchant,
+                        date = date.toString(),
+                    )
+                ) {
+                    filter {
+                        eq("user_id", config.userId)
+                        eq("id", transactionId)
+                    }
+                }
+            Unit
+        }
+
+    override suspend fun delete(transactionId: String): Outcome<Unit> =
+        runCatchingDomain(supabase.isConfigured) {
+            supabase.postgrest.from("transactions").delete {
+                filter {
+                    eq("user_id", config.userId)
+                    eq("id", transactionId)
+                }
+            }
+            Unit
+        }
 }
+
+@kotlinx.serialization.Serializable
+private data class ReceiptExpensePatch(
+    @kotlinx.serialization.SerialName("amount") val amount: Double,
+    @kotlinx.serialization.SerialName("merchant") val merchant: String,
+    @kotlinx.serialization.SerialName("date") val date: String,
+)

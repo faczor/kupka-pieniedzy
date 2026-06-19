@@ -83,6 +83,8 @@ data class EntryListItem(
     val kind: EntryKind,
     val receiptId: String?,
     override val receiptItemCount: Int?,
+    /** Paragon zatwierdzony (kategorie utrwalone, status `saved`). false = `ready`, „do zatwierdzenia”. */
+    val confirmed: Boolean = true,
 ) : EntryRowData
 
 enum class EntryKind {

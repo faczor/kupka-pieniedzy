@@ -69,9 +69,16 @@ class DefaultEntriesService(
         val isCurrent = year == today.year && month == today.month.ordinal + 1
 
         val allEntries = transactionRepository.getForMonth(start, end).bind()
-        val savedReceipts = receiptRepository.getSavedForMonth(start, end).bind()
+        val receiptsWithTx = receiptRepository.getWithTransactionForMonth(start, end).bind()
         val receiptIdByTransaction =
-            savedReceipts.mapNotNull { r -> r.transactionId?.let { it to r.id } }.toMap()
+            receiptsWithTx.mapNotNull { r -> r.transactionId?.let { it to r.id } }.toMap()
+        // Paragony `ready` mają już transakcję (widoczne + liczone), ale czekają na zatwierdzenie
+        // kategorii — oznaczamy je w wierszu jako „do zatwierdzenia”.
+        val unconfirmedTxIds =
+            receiptsWithTx
+                .filter { it.status == ReceiptStatus.Ready }
+                .mapNotNull { it.transactionId }
+                .toSet()
 
         val filters = buildFilters(allEntries)
         val filtered =
@@ -106,6 +113,7 @@ class DefaultEntriesService(
             buildDays(
                 entries = filtered,
                 receiptIdByTransaction = receiptIdByTransaction,
+                unconfirmedTxIds = unconfirmedTxIds,
                 analyzingItems = analyzingItems,
                 today = today,
                 sort = sort,
@@ -181,6 +189,7 @@ class DefaultEntriesService(
     private fun buildDays(
         entries: List<RecentEntry>,
         receiptIdByTransaction: Map<String, String>,
+        unconfirmedTxIds: Set<String>,
         analyzingItems: List<EntryListItem>,
         today: LocalDate,
         sort: EntrySort,
@@ -196,7 +205,7 @@ class DefaultEntriesService(
                     EntrySort.Newest -> rows
                     EntrySort.Highest -> rows.sortedByDescending { abs(it.amount.minorUnits) }
                 }
-            val mapped = sorted.map { it.toItem(receiptIdByTransaction) }
+            val mapped = sorted.map { it.toItem(receiptIdByTransaction, unconfirmedTxIds) }
             val items = if (date == today) analyzingItems + mapped else mapped
 
             val netMinor = rows.sumOf { signedDayMinor(it) }
@@ -210,7 +219,10 @@ class DefaultEntriesService(
         }
     }
 
-    private fun RecentEntry.toItem(receiptIdByTransaction: Map<String, String>): EntryListItem {
+    private fun RecentEntry.toItem(
+        receiptIdByTransaction: Map<String, String>,
+        unconfirmedTxIds: Set<String>,
+    ): EntryListItem {
         val isReceipt = receiptItemCount != null
         return EntryListItem(
             id = id,
@@ -221,6 +233,7 @@ class DefaultEntriesService(
             kind = if (isReceipt) EntryKind.Receipt else EntryKind.Standard,
             receiptId = if (isReceipt) receiptIdByTransaction[id] else null,
             receiptItemCount = receiptItemCount,
+            confirmed = !(isReceipt && id in unconfirmedTxIds),
         )
     }
 

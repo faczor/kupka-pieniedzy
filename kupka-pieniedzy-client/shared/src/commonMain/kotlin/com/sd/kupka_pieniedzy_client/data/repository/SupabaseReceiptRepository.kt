@@ -110,7 +110,7 @@ class SupabaseReceiptRepository(
                 .map { it.toDomain(config.defaultCurrency) }
         }
 
-    override suspend fun getSavedForMonth(
+    override suspend fun getWithTransactionForMonth(
         start: kotlinx.datetime.LocalDate,
         end: kotlinx.datetime.LocalDate,
     ): Outcome<List<Receipt>> =
@@ -120,7 +120,7 @@ class SupabaseReceiptRepository(
                 .select {
                     filter {
                         eq("user_id", config.userId)
-                        eq("status", "saved")
+                        isIn("status", listOf("ready", "saved"))
                         gte("date", start.toString())
                         lte("date", end.toString())
                     }
@@ -128,6 +128,22 @@ class SupabaseReceiptRepository(
                 }
                 .decodeList<ReceiptDto>()
                 .map { it.toDomain(config.defaultCurrency) }
+        }
+
+    override suspend fun linkTransaction(
+        receiptId: String,
+        transactionId: String,
+    ): Outcome<Unit> =
+        runCatchingDomain(supabase.isConfigured) {
+            supabase.postgrest.from("receipts").update(
+                ReceiptLinkPatch(transactionId = transactionId)
+            ) {
+                filter {
+                    eq("user_id", config.userId)
+                    eq("id", receiptId)
+                }
+            }
+            Unit
         }
 
     override suspend fun getReadyOne(): Outcome<Receipt?> =
@@ -319,6 +335,11 @@ private data class ReceiptStatusPatch(
 private data class ReceiptFinalizePatch(
     @kotlinx.serialization.SerialName("transaction_id") val transactionId: String,
     @kotlinx.serialization.SerialName("status") val status: String,
+)
+
+@kotlinx.serialization.Serializable
+private data class ReceiptLinkPatch(
+    @kotlinx.serialization.SerialName("transaction_id") val transactionId: String,
 )
 
 @kotlinx.serialization.Serializable
