@@ -136,7 +136,6 @@ interface Strings {
     fun assignCategory(category: String): String
 
     val receiptSourceTitle: String
-    val doubleTapToZoom: String
     val backToBreakdown: String
     val actionReanalyze: String
     val actionReanalyzeSubtitle: String
