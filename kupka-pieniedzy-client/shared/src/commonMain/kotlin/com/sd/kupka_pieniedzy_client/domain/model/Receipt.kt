@@ -17,6 +17,8 @@ data class Receipt(
     val transactionId: String?,
     val status: ReceiptStatus,
     val confidence: Float,
+    /** Powód niepowodzenia — ustawiony tylko gdy [status] == [ReceiptStatus.Failed]. */
+    val failureReason: ReceiptFailureReason? = null,
 )
 
 /**

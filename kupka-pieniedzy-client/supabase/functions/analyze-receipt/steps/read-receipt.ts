@@ -24,10 +24,14 @@ function toReadReceipt(json: Record<string, unknown>): ReadReceipt {
     })
     .filter((l) => l.name.length > 0 && Number.isFinite(l.amount));
 
+  const error =
+    typeof json.error === "string" && json.error.trim() ? json.error.trim() : null;
+
   return {
     store: String(json.store ?? "").trim() || "Nieznany sklep",
     date: typeof json.date === "string" && json.date.trim() ? json.date.trim() : null,
     printedTotal: Number.isFinite(Number(json.total)) ? Number(json.total) : null,
     lines,
+    error,
   };
 }

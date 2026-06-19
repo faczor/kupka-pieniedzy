@@ -1,7 +1,7 @@
 // Krok 1: żądanie -> obraz paragonu (base64 + media_type).
 // Źródło: Storage (imagePath) albo base64 wprost (test).
 import type { AnalyzeRequest, ReceiptImage } from "../model.ts";
-import { invalidRequest } from "../errors.ts";
+import { invalidRequest, unsupportedFormat } from "../errors.ts";
 import { downloadImageBase64 } from "../services/supabase.ts";
 
 const DEFAULT_BUCKET = Deno.env.get("RECEIPTS_BUCKET") ?? "receipts";
@@ -35,7 +35,7 @@ function detectMediaType(b64: string): string {
   if (b64.startsWith("R0lGOD")) return "image/gif";
   if (b64.startsWith("UklGR")) return "image/webp";
   if (isHeif(b64)) {
-    throw invalidRequest(
+    throw unsupportedFormat(
       "Unsupported image format (HEIC/HEIF). Wyślij JPEG/PNG/WebP — zdjęcie należy " +
         "transkodować na urządzeniu przed wysłaniem do funkcji.",
     );
