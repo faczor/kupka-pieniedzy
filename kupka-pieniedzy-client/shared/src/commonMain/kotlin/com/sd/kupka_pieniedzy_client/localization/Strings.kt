@@ -2,6 +2,7 @@ package com.sd.kupka_pieniedzy_client.localization
 
 import com.sd.kupka_pieniedzy_client.core.error.DomainError
 import com.sd.kupka_pieniedzy_client.core.error.ValidationRule
+import com.sd.kupka_pieniedzy_client.domain.model.ReceiptFailureReason
 
 /**
  * Wszystkie teksty UI. Żadnych literałów w warstwie prezentacji — wszystko stąd, dla aktualnie
@@ -85,6 +86,14 @@ interface Strings {
     val analyzingActionShowImageSubtitle: String
     val analyzingActionCancel: String
     val imageLoadError: String
+
+    // Nieudana analiza paragonu (wiersz Failed + arkusz akcji).
+    val receiptFailedTitle: String
+    val receiptFailedRowMeta: String
+    val receiptFailedSheetTitle: String
+    val receiptFailedReanalyzeSubtitle: String
+
+    fun receiptFailureReasonMessage(reason: ReceiptFailureReason): String
 
     val othersLabel: String
     val emptyEntriesTitle: String

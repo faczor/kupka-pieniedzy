@@ -48,6 +48,11 @@ export interface ReadReceipt {
   /** Kwota do zapłaty (DO ZAPŁATY/SUMA) w złotych — tylko do cross-checku. */
   printedTotal: number | null;
   lines: ReceiptLine[];
+  /**
+   * Typ błędu zgłoszony przez model, gdy zdjęcie nie jest użytecznym paragonem (np. "not_a_receipt",
+   * "unreadable"). `null` przy poprawnym odczycie. Pipeline zamienia go na typowany błąd `not_a_receipt`.
+   */
+  error: string | null;
 }
 
 /** Pozycja w odpowiedzi (kwota w groszach, spójnie z Money/raw_ocr_json). */

@@ -1,5 +1,6 @@
 package com.sd.kupka_pieniedzy_client.data.mapper
 
+import com.sd.kupka_pieniedzy_client.domain.model.ReceiptFailureReason
 import com.sd.kupka_pieniedzy_client.domain.model.ReceiptStatus
 import com.sd.kupka_pieniedzy_client.domain.model.SourceType
 import com.sd.kupka_pieniedzy_client.domain.model.TransactionType
@@ -55,3 +56,7 @@ fun ReceiptStatus.toDbValue(): String =
         ReceiptStatus.Saved -> "saved"
         ReceiptStatus.Failed -> "failed"
     }
+
+fun String?.toReceiptFailureReason(): ReceiptFailureReason? = ReceiptFailureReason.fromCode(this)
+
+fun ReceiptFailureReason.toDbValue(): String = code

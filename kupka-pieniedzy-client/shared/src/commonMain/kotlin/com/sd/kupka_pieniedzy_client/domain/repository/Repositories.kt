@@ -14,6 +14,7 @@ import com.sd.kupka_pieniedzy_client.domain.model.NewCategory
 import com.sd.kupka_pieniedzy_client.domain.model.NewManualExpense
 import com.sd.kupka_pieniedzy_client.domain.model.RawReceiptAnalysis
 import com.sd.kupka_pieniedzy_client.domain.model.Receipt
+import com.sd.kupka_pieniedzy_client.domain.model.ReceiptFailureReason
 import com.sd.kupka_pieniedzy_client.domain.model.RecentEntry
 import com.sd.kupka_pieniedzy_client.domain.model.Transaction
 import kotlinx.datetime.LocalDate
@@ -124,6 +125,9 @@ interface ReceiptRepository {
      * klienta) oraz surowy odczyt [raw] do `receipts.raw_ocr_json` (wewnętrzny audyt/analiza).
      */
     suspend fun markReady(receipt: AnalyzedReceipt, raw: RawReceiptAnalysis): Outcome<Unit>
+
+    /** Oznacza paragon jako nieudany ([ReceiptStatus.Failed]) z powodem — by nie wisiał w `pending`. */
+    suspend fun markFailed(receiptId: String, reason: ReceiptFailureReason): Outcome<Unit>
 
     suspend fun delete(receiptId: String): Outcome<Unit>
 

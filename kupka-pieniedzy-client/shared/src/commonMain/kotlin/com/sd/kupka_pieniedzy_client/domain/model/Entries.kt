@@ -73,7 +73,7 @@ data class EntryDayGroup(
     val entries: List<EntryListItem>,
 )
 
-/** Pojedynczy wiersz listy. [kind] decyduje o renderze (zwykły / paragon / w analizie). */
+/** Pojedynczy wiersz listy. [kind] decyduje o renderze (zwykły / paragon / w analizie / nieudany). */
 data class EntryListItem(
     val id: String,
     override val title: String,
@@ -85,12 +85,15 @@ data class EntryListItem(
     override val receiptItemCount: Int?,
     /** Paragon zatwierdzony (kategorie utrwalone, status `saved`). false = `ready`, „do zatwierdzenia”. */
     val confirmed: Boolean = true,
+    /** Tylko dla [EntryKind.Failed] — powód niepowodzenia analizy (do komunikatu w sheecie). */
+    val failureReason: ReceiptFailureReason? = null,
 ) : EntryRowData
 
 enum class EntryKind {
     Standard,
     Receipt,
     Analyzing,
+    Failed,
 }
 
 /** Pozycja rozbicia paragonu (rozwinięcie in-line). [category] == null → „inne”/nieprzypisana. */

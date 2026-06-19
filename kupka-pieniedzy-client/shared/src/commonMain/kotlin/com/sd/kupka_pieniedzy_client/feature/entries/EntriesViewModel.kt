@@ -198,6 +198,34 @@ class EntriesViewModel(
         _analyzingSheet.value = AnalyzingSheetState(id)
     }
 
+    /** Ponawia analizę nieudanego paragonu — wraca do „w analizie” i analizuje to samo zdjęcie ze Storage. */
+    fun reanalyzeFailedReceipt(receiptId: String) {
+        AppLog.action("Entries.reanalyzeFailed", "receiptId=$receiptId")
+        viewModelScope.launch {
+            receiptService.reanalyze(receiptId).onFailure {
+                AppLog.failure("Entries.reanalyzeFailed", it)
+                toast.show(ToastMessage.ReceiptReanalyzeFailed)
+            }
+        }
+    }
+
+    /** Usuwa nieudany paragon (z arkusza akcji). Powodzenie/porażkę sygnalizuje toast; lista
+     *  odświeża się sama przez [DataChangeNotifier]. */
+    fun deleteFailedReceipt(receiptId: String) {
+        AppLog.action("Entries.deleteFailed", "receiptId=$receiptId")
+        viewModelScope.launch {
+            receiptService
+                .deleteReceipt(receiptId)
+                .fold(
+                    onSuccess = { toast.show(ToastMessage.ReceiptDeleted) },
+                    onFailure = {
+                        AppLog.failure("Entries.deleteFailed", it)
+                        toast.show(ToastMessage.ReceiptDeleteFailed)
+                    },
+                )
+        }
+    }
+
     private fun reload(showLoading: Boolean) {
         AppLog.action("Entries.load", "year=$year month=$month filter=$filterKey sort=$sort")
         viewModelScope.launch {

@@ -2,14 +2,19 @@ package com.sd.kupka_pieniedzy_client.domain.service
 
 import com.sd.kupka_pieniedzy_client.core.error.DomainError
 import com.sd.kupka_pieniedzy_client.core.error.ValidationRule
+import com.sd.kupka_pieniedzy_client.core.logging.AppLog
+import com.sd.kupka_pieniedzy_client.core.logging.action
+import com.sd.kupka_pieniedzy_client.core.logging.failure
 import com.sd.kupka_pieniedzy_client.core.money.Money
 import com.sd.kupka_pieniedzy_client.core.result.Outcome
 import com.sd.kupka_pieniedzy_client.core.result.onFailure
+import com.sd.kupka_pieniedzy_client.core.result.onSuccess
 import com.sd.kupka_pieniedzy_client.core.result.outcomeBinding
 import com.sd.kupka_pieniedzy_client.core.time.DateProvider
 import com.sd.kupka_pieniedzy_client.domain.event.DataChangeNotifier
 import com.sd.kupka_pieniedzy_client.domain.model.AnalyzedItem
 import com.sd.kupka_pieniedzy_client.domain.model.AnalyzedReceipt
+import com.sd.kupka_pieniedzy_client.domain.model.ReceiptFailureReason
 import com.sd.kupka_pieniedzy_client.domain.repository.AccountRepository
 import com.sd.kupka_pieniedzy_client.domain.repository.CategoryRepository
 import com.sd.kupka_pieniedzy_client.domain.repository.ReceiptAnalysisRepository
@@ -59,12 +64,30 @@ class DefaultReceiptService(
         id
     }
 
-    override suspend fun runAnalysis(receiptId: String): Outcome<Unit> = outcomeBinding {
+    override suspend fun runAnalysis(receiptId: String): Outcome<Unit> {
+        // Każde niepowodzenie → status `failed` z powodem, żeby paragon nie wisiał w `pending`.
+        val result = analyzeAndStore(receiptId)
+        if (result is Outcome.Failure) {
+            val reason = result.error.toReceiptFailureReason()
+            AppLog.action("Receipt.runAnalysis", "FAILED receipt=$receiptId reason=$reason")
+            receiptRepository
+                .markFailed(receiptId, reason)
+                .onFailure { AppLog.failure("Receipt.markFailed", it) }
+            changeNotifier.notifyTransactionsChanged()
+        }
+        return result
+    }
+
+    private suspend fun analyzeAndStore(receiptId: String): Outcome<Unit> = outcomeBinding {
         val receipt = receiptRepository.getReceipt(receiptId).bind()
         val imagePath =
             receipt.imagePath
                 ?: fail(DomainError.Unknown(cause = "Paragon $receiptId nie ma zapisanego zdjęcia"))
         val raw = analysisRepository.analyze(imagePath).bind()
+        // Pusty wynik (0 pozycji / suma zero) to nie paragon — guard niezależny od Edge.
+        if (raw.items.isEmpty() || raw.total.minorUnits <= 0L) {
+            fail(DomainError.Unknown(cause = ReceiptFailureReason.NotAReceipt.code))
+        }
         val byName = categoryRepository.getAll().bind().associateBy { it.name.lowercase() }
 
         val items =
@@ -179,3 +202,8 @@ class DefaultReceiptService(
             ?.id ?: categoryRepository.getDefault().bind().id
     }
 }
+
+/** Stabilny kod typu błędu niesiony w [DomainError.Unknown.cause]; reszta → [ReceiptFailureReason.Unknown]. */
+private fun DomainError.toReceiptFailureReason(): ReceiptFailureReason =
+    ReceiptFailureReason.fromCode((this as? DomainError.Unknown)?.cause)
+        ?: ReceiptFailureReason.Unknown

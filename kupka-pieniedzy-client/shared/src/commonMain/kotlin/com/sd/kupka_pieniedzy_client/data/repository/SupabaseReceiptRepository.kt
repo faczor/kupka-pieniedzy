@@ -9,6 +9,7 @@ import com.sd.kupka_pieniedzy_client.data.dto.ReceiptItemDto
 import com.sd.kupka_pieniedzy_client.data.dto.ReceiptItemInsertDto
 import com.sd.kupka_pieniedzy_client.data.mapper.toAnalyzedReceipt
 import com.sd.kupka_pieniedzy_client.data.mapper.toDomain
+import com.sd.kupka_pieniedzy_client.data.mapper.toDbValue
 import com.sd.kupka_pieniedzy_client.data.mapper.toRawOcrJson
 import com.sd.kupka_pieniedzy_client.data.mapper.toZl
 import com.sd.kupka_pieniedzy_client.data.supabase.SupabaseClientProvider
@@ -18,6 +19,7 @@ import com.sd.kupka_pieniedzy_client.domain.model.AnalyzedItem
 import com.sd.kupka_pieniedzy_client.domain.model.AnalyzedReceipt
 import com.sd.kupka_pieniedzy_client.domain.model.RawReceiptAnalysis
 import com.sd.kupka_pieniedzy_client.domain.model.Receipt
+import com.sd.kupka_pieniedzy_client.domain.model.ReceiptFailureReason
 import com.sd.kupka_pieniedzy_client.domain.repository.ReceiptRepository
 import io.github.jan.supabase.postgrest.query.Order
 import kotlinx.serialization.json.JsonObject
@@ -102,7 +104,7 @@ class SupabaseReceiptRepository(
                 .select {
                     filter {
                         eq("user_id", config.userId)
-                        isIn("status", listOf("pending", "ready"))
+                        isIn("status", listOf("pending", "ready", "failed"))
                     }
                     order("created_at", Order.DESCENDING)
                 }
@@ -247,6 +249,22 @@ class SupabaseReceiptRepository(
             Unit
         }
 
+    override suspend fun markFailed(
+        receiptId: String,
+        reason: ReceiptFailureReason,
+    ): Outcome<Unit> =
+        runCatchingDomain(supabase.isConfigured) {
+            supabase.postgrest.from("receipts").update(
+                ReceiptFailedPatch(status = "failed", failureReason = reason.toDbValue())
+            ) {
+                filter {
+                    eq("user_id", config.userId)
+                    eq("id", receiptId)
+                }
+            }
+            Unit
+        }
+
     override suspend fun delete(receiptId: String): Outcome<Unit> =
         runCatchingDomain(supabase.isConfigured) {
             // Najpierw best-effort usuń zdjęcie z bucketu — brak/niepowodzenie nie blokuje usunięcia wiersza.
@@ -329,6 +347,12 @@ private data class ReceiptImagePathPatch(
 @kotlinx.serialization.Serializable
 private data class ReceiptStatusPatch(
     @kotlinx.serialization.SerialName("status") val status: String,
+)
+
+@kotlinx.serialization.Serializable
+private data class ReceiptFailedPatch(
+    @kotlinx.serialization.SerialName("status") val status: String,
+    @kotlinx.serialization.SerialName("failure_reason") val failureReason: String,
 )
 
 @kotlinx.serialization.Serializable

@@ -15,6 +15,7 @@ import com.sd.kupka_pieniedzy_client.domain.model.EntryKind
 import com.sd.kupka_pieniedzy_client.domain.model.EntryListItem
 import com.sd.kupka_pieniedzy_client.domain.model.EntrySort
 import com.sd.kupka_pieniedzy_client.domain.model.FilterBudget
+import com.sd.kupka_pieniedzy_client.domain.model.ReceiptFailureReason
 import com.sd.kupka_pieniedzy_client.domain.model.ReceiptPositionItem
 import com.sd.kupka_pieniedzy_client.domain.model.ReceiptStatus
 import com.sd.kupka_pieniedzy_client.domain.model.RecentEntry
@@ -83,26 +84,43 @@ class DefaultEntriesService(
             if (filterKey == null) allEntries
             else allEntries.filter { it.category.name == filterKey }
 
-        // Paragony w analizie — tylko bieżący miesiąc i tylko w widoku „Wszystkie”.
-        val pending =
-            if (isCurrent)
-                receiptRepository.getActive().bind().filter { it.status == ReceiptStatus.Pending }
-            else emptyList()
-        val analyzingItems =
+        // Paragony aktywne (w analizie / nieudane) — tylko bieżący miesiąc i tylko w widoku „Wszystkie”.
+        val active = if (isCurrent) receiptRepository.getActive().bind() else emptyList()
+        val pending = active.filter { it.status == ReceiptStatus.Pending }
+        val failed = active.filter { it.status == ReceiptStatus.Failed }
+        val noticeItems =
             if (filterKey == null) {
-                pending.map { r ->
-                    EntryListItem(
-                        id = r.id,
-                        title = r.store,
-                        category =
-                            CategoryRef(name = "", icon = "receipt_long", colorHex = "#5FA1A0"),
-                        amount = Money.ZERO,
-                        type = TransactionType.Expense,
-                        kind = EntryKind.Analyzing,
-                        receiptId = r.id,
-                        receiptItemCount = null,
-                    )
-                }
+                val failedItems =
+                    failed.map { r ->
+                        EntryListItem(
+                            id = r.id,
+                            title = r.store,
+                            // Wiersz Failed renderuje ikonę/kolor z KupkaTheme — category jest tu nieużywane.
+                            category = CategoryRef(name = "", icon = "", colorHex = ""),
+                            amount = Money.ZERO,
+                            type = TransactionType.Expense,
+                            kind = EntryKind.Failed,
+                            receiptId = r.id,
+                            receiptItemCount = null,
+                            failureReason = r.failureReason ?: ReceiptFailureReason.Unknown,
+                        )
+                    }
+                val analyzingItems =
+                    pending.map { r ->
+                        EntryListItem(
+                            id = r.id,
+                            title = r.store,
+                            category =
+                                CategoryRef(name = "", icon = "receipt_long", colorHex = "#5FA1A0"),
+                            amount = Money.ZERO,
+                            type = TransactionType.Expense,
+                            kind = EntryKind.Analyzing,
+                            receiptId = r.id,
+                            receiptItemCount = null,
+                        )
+                    }
+                // Nieudane na górze (wymagają reakcji), pod nimi „w analizie”.
+                failedItems + analyzingItems
             } else {
                 emptyList()
             }
@@ -112,7 +130,7 @@ class DefaultEntriesService(
                 entries = filtered,
                 receiptIdByTransaction = receiptIdByTransaction,
                 unconfirmedTxIds = unconfirmedTxIds,
-                analyzingItems = analyzingItems,
+                analyzingItems = noticeItems,
                 today = today,
                 sort = sort,
             )

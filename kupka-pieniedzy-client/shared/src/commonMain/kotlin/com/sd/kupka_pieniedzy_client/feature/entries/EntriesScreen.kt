@@ -22,7 +22,9 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -63,6 +65,7 @@ import com.sd.kupka_pieniedzy_client.domain.model.EntryDayGroup
 import com.sd.kupka_pieniedzy_client.domain.model.EntryKind
 import com.sd.kupka_pieniedzy_client.domain.model.EntryListItem
 import com.sd.kupka_pieniedzy_client.domain.model.EntrySort
+import com.sd.kupka_pieniedzy_client.domain.model.ReceiptFailureReason
 import com.sd.kupka_pieniedzy_client.domain.model.ReceiptPositionItem
 import com.sd.kupka_pieniedzy_client.domain.model.TrendDirection
 import com.sd.kupka_pieniedzy_client.localization.LocalStrings
@@ -78,6 +81,7 @@ fun EntriesScreen() {
     val expanded by vm.expanded.collectAsStateWithLifecycle()
     val sheet by vm.analyzingSheet.collectAsStateWithLifecycle()
     val colors = KupkaTheme.colors
+    var failedItem by remember { mutableStateOf<EntryListItem?>(null) }
 
     Box(modifier = Modifier.fillMaxSize().background(colors.surfaceBg)) {
         Column(modifier = Modifier.fillMaxSize()) {
@@ -98,6 +102,7 @@ fun EntriesScreen() {
                     onNextMonth = vm::nextMonth,
                     onToggleReceipt = vm::toggleReceipt,
                     onAnalyzingClick = vm::openAnalyzingSheet,
+                    onFailedClick = { failedItem = it },
                 )
             }
             if (state is ScreenState.Content) {
@@ -121,6 +126,22 @@ fun EntriesScreen() {
         sheet?.preview?.let { preview ->
             ReceiptImagePreview(state = preview, onClose = vm::closeImagePreview)
         }
+
+        KupkaBottomSheet(visible = failedItem != null, onDismiss = { failedItem = null }) {
+            failedItem?.let { item ->
+                ReceiptFailedSheetContent(
+                    reason = item.failureReason ?: ReceiptFailureReason.Unknown,
+                    onReanalyze = {
+                        item.receiptId?.let { vm.reanalyzeFailedReceipt(it) }
+                        failedItem = null
+                    },
+                    onDelete = {
+                        item.receiptId?.let { vm.deleteFailedReceipt(it) }
+                        failedItem = null
+                    },
+                )
+            }
+        }
     }
 }
 
@@ -135,6 +156,7 @@ private fun EntriesContent(
     onNextMonth: () -> Unit,
     onToggleReceipt: (String) -> Unit,
     onAnalyzingClick: (String) -> Unit,
+    onFailedClick: (EntryListItem) -> Unit,
 ) {
     val strings = LocalStrings.current
     val colors = KupkaTheme.colors
@@ -205,6 +227,7 @@ private fun EntriesContent(
                         expandedPositions = expandedPositions,
                         onToggleReceipt = onToggleReceipt,
                         onAnalyzingClick = onAnalyzingClick,
+                        onFailedClick = onFailedClick,
                     )
                 }
             }
@@ -491,6 +514,7 @@ private fun DayCard(
     expandedPositions: ScreenState<List<ReceiptPositionItem>>?,
     onToggleReceipt: (String) -> Unit,
     onAnalyzingClick: (String) -> Unit,
+    onFailedClick: (EntryListItem) -> Unit,
 ) {
     val colors = KupkaTheme.colors
     val strings = LocalStrings.current
@@ -520,6 +544,8 @@ private fun DayCard(
             val showDivider = index < group.entries.lastIndex
             when (item.kind) {
                 EntryKind.Analyzing -> AnalyzingRow(item, showDivider, onAnalyzingClick)
+                EntryKind.Failed ->
+                    FailedRow(item, showDivider, onClick = { onFailedClick(item) })
                 EntryKind.Receipt ->
                     ReceiptRow(
                         item = item,
@@ -717,6 +743,32 @@ private fun AnalyzingRow(
         highlight = true,
         showDivider = showDivider,
         onClick = item.receiptId?.let { id -> { onAnalyzingClick(id) } },
+        contentPadding = rowPadding,
+    )
+}
+
+@Composable
+private fun FailedRow(item: EntryListItem, showDivider: Boolean, onClick: () -> Unit) {
+    val colors = KupkaTheme.colors
+    val strings = LocalStrings.current
+    EntryRow(
+        title = strings.receiptFailedTitle,
+        meta = strings.receiptFailedRowMeta,
+        metaColor = colors.budgetRedFill,
+        trailing = { MaterialSymbol(AppIcons.ChevronRight, size = 20.dp, tint = colors.onSurfaceLow) },
+        leading = {
+            Box(
+                modifier =
+                    Modifier.size(40.dp)
+                        .clip(KupkaTheme.shapes.iconTileShape)
+                        .background(colors.budgetRedTrack),
+                contentAlignment = Alignment.Center,
+            ) {
+                MaterialSymbol(AppIcons.Error, size = 21.dp, tint = colors.budgetRedFill)
+            }
+        },
+        showDivider = showDivider,
+        onClick = onClick,
         contentPadding = rowPadding,
     )
 }

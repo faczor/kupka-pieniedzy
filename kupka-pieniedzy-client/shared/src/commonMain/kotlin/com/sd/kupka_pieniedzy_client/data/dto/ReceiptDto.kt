@@ -17,6 +17,7 @@ data class ReceiptDto(
     @SerialName("confidence") val confidence: Float? = null,
     @SerialName("raw_ocr_json") val rawOcrJson: JsonElement? = null,
     @SerialName("acknowledged") val acknowledged: Boolean = false,
+    @SerialName("failure_reason") val failureReason: String? = null,
 )
 
 @Serializable

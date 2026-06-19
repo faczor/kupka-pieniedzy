@@ -25,6 +25,7 @@ fun ReceiptDto.toDomain(currency: String): Receipt =
         transactionId = transactionId,
         status = status.toReceiptStatus(),
         confidence = confidence ?: 0f,
+        failureReason = failureReason.toReceiptFailureReason(),
     )
 
 /**

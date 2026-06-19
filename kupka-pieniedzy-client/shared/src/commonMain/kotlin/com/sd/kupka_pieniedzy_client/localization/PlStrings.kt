@@ -2,6 +2,7 @@ package com.sd.kupka_pieniedzy_client.localization
 
 import com.sd.kupka_pieniedzy_client.core.error.DomainError
 import com.sd.kupka_pieniedzy_client.core.error.ValidationRule
+import com.sd.kupka_pieniedzy_client.domain.model.ReceiptFailureReason
 
 /** Polskie teksty UI. */
 object PlStrings : Strings {
@@ -93,6 +94,23 @@ object PlStrings : Strings {
     override val analyzingActionShowImageSubtitle = "Zobacz, co jest analizowane"
     override val analyzingActionCancel = "Anuluj i usuń z kolejki"
     override val imageLoadError = "Nie udało się wczytać zdjęcia"
+
+    override val receiptFailedTitle = "Nieudane przetwarzanie"
+    override val receiptFailedRowMeta = "Dotknij, aby zobaczyć szczegóły"
+    override val receiptFailedSheetTitle = "Nie udało się przetworzyć paragonu"
+    override val receiptFailedReanalyzeSubtitle = "Spróbuj przeanalizować to samo zdjęcie jeszcze raz"
+
+    override fun receiptFailureReasonMessage(reason: ReceiptFailureReason): String =
+        when (reason) {
+            ReceiptFailureReason.UnsupportedFormat ->
+                "Nie udało się odczytać zdjęcia — sprawdź format. Wyślij zwykłe zdjęcie JPG/PNG " +
+                    "(nie Live Photo ani HEIC)."
+            ReceiptFailureReason.NotAReceipt ->
+                "Na zdjęciu nie rozpoznaliśmy paragonu. Upewnij się, że to paragon, i zrób " +
+                    "wyraźniejsze zdjęcie."
+            ReceiptFailureReason.Unknown ->
+                "Coś poszło nie tak podczas przetwarzania. Spróbuj ponownie później."
+        }
 
     override val othersLabel = "inne"
     override val emptyEntriesTitle = "Brak wpisów"

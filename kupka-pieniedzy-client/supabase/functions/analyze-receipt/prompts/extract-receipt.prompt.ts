@@ -24,6 +24,7 @@ export default `<prompt>
         <instruction>Polish receipts use a comma as the decimal separator; output every number with a dot</instruction>
         <instruction>All amounts are numbers (float), never strings, expressed in major units (złote, e.g. 3.49)</instruction>
         <instruction>If a field is missing or unreadable, use null (for items, simply omit unreadable lines)</instruction>
+        <instruction>If the image is NOT a store receipt (e.g. a random photo, a screenshot, a document, a menu) or is too unreadable to extract any product line, set "error" to a short snake_case reason ("not_a_receipt" when it is not a receipt at all, "unreadable" when it is a receipt but illegible), return an empty items array, and do not invent data. Otherwise set "error" to null.</instruction>
         <instruction>Return ONLY the JSON object described by json_schema - no prose, no code fences, no comments</instruction>
         <instruction>Follow the flow</instruction>
     </instructions>
@@ -44,6 +45,7 @@ export default `<prompt>
           "store": "Biedronka",
           "date": "2026-06-15",
           "total": 21.96,
+          "error": null,
           "items": [
             { "name": "Mleko 2% 1l", "amount": 3.49 }
           ]
@@ -66,6 +68,11 @@ export default `<prompt>
             <name>total</name>
             <type>Number | null</type>
             <description>Amount due in major units: DO ZAPŁATY when present (includes deposit), otherwise SUMA / RAZEM. Null if not present. Used as a cross-check against the sum of items; do not invent it.</description>
+        </field>
+        <field>
+            <name>error</name>
+            <type>String | null</type>
+            <description>Short snake_case error type when the image is not a usable receipt: "not_a_receipt" (not a receipt at all) or "unreadable" (a receipt but illegible). Null on a normal successful read.</description>
         </field>
         <field>
             <name>items</name>

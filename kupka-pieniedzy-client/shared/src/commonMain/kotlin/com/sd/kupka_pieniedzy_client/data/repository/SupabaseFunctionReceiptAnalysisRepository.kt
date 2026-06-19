@@ -82,13 +82,19 @@ class SupabaseFunctionReceiptAnalysisRepository(
      * (np. `analysis_failed: ...`) ginie.
      */
     private fun functionError(status: Int, body: String): DomainException {
-        val message =
-            runCatching { json.decodeFromString(FunctionError.serializer(), body).error.message }
-                .getOrNull()
-        AppLog.w("ReceiptAnalysis.analyze FAILED -> HTTP $status, server=${message ?: body.take(500)}")
+        val parsed =
+            runCatching { json.decodeFromString(FunctionError.serializer(), body).error }.getOrNull()
+        val code = parsed?.code
+        val message = parsed?.message
+        AppLog.w(
+            "ReceiptAnalysis.analyze FAILED -> HTTP $status, code=${code ?: "?"}, " +
+                "server=${message ?: body.take(500)}"
+        )
+        // Stabilny `code` Edge Function (typ błędu) niesiemy w `Unknown.cause` — serwis mapuje go na
+        // ReceiptFailureReason. Dla 5xx (analysis_failed/internal) zostaje Server → powód „Unknown".
         val error =
             if (status >= 500) DomainError.Server(status)
-            else DomainError.Unknown(cause = message ?: "Edge function HTTP $status")
+            else DomainError.Unknown(cause = code ?: message ?: "Edge function HTTP $status")
         return DomainException(error)
     }
 
