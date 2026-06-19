@@ -24,6 +24,8 @@ import org.jetbrains.compose.resources.Font
 data class KupkaTypography(
     val heroNumber: TextStyle,
     val amountInput: TextStyle,
+    /** Editorial display — nagłówki onboardingu/powitań (większe niż [title]). */
+    val display: TextStyle,
     val heroLabel: TextStyle,
     val title: TextStyle,
     val section: TextStyle,
@@ -70,6 +72,14 @@ fun buildKupkaTypography(): KupkaTypography {
                 fontSize = 48.sp,
                 lineHeight = 52.sp,
                 fontFeatureSettings = TNUM,
+            ),
+        display =
+            TextStyle(
+                fontFamily = manrope,
+                fontWeight = FontWeight.Bold,
+                fontSize = 30.sp,
+                lineHeight = 36.sp,
+                letterSpacing = (-0.4).sp,
             ),
         heroLabel =
             TextStyle(

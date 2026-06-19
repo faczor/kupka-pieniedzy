@@ -16,6 +16,12 @@ interface CategoryService {
 
     suspend fun createCategory(input: NewCategory): Outcome<Category>
 
+    /** Onboarding: zakłada kategorie startowe ([selected]) + domyślną „inne" ([default]). */
+    suspend fun provisionInitialCategories(
+        selected: List<NewCategory>,
+        default: NewCategory,
+    ): Outcome<Unit>
+
     suspend fun updateCategory(id: String, input: EditCategory): Outcome<Category>
 
     suspend fun countEntries(categoryId: String): Outcome<Int>
@@ -36,6 +42,11 @@ class DefaultCategoryService(private val categoryRepository: CategoryRepository)
         }
         categoryRepository.create(input.copy(name = input.name.trim())).bind()
     }
+
+    override suspend fun provisionInitialCategories(
+        selected: List<NewCategory>,
+        default: NewCategory,
+    ): Outcome<Unit> = categoryRepository.provisionInitial(selected, default)
 
     override suspend fun updateCategory(id: String, input: EditCategory): Outcome<Category> =
         outcomeBinding {

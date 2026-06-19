@@ -104,18 +104,55 @@ class SupabaseCategoryRepository(
             created.toDomain(config.defaultCurrency, budgetMinor = input.monthlyBudget?.minorUnits)
         }
 
+    override suspend fun provisionInitial(
+        selected: List<NewCategory>,
+        default: NewCategory,
+    ): Outcome<Unit> =
+        runCatchingDomain(supabase.isConfigured) {
+            val existing = fetchCategories()
+            val existingNames = existing.map { it.name.trim().lowercase() }.toSet()
+            val hasDefault = existing.any { it.isDefault }
+
+            val rows = mutableListOf<CategoryInsertDto>()
+            selected.forEach { c ->
+                if (c.name.trim().lowercase() !in existingNames) {
+                    rows +=
+                        CategoryInsertDto(
+                            userId = config.userId,
+                            name = c.name.trim(),
+                            icon = c.icon,
+                            color = c.colorHex,
+                            isDefault = false,
+                        )
+                }
+            }
+            // „inne" tylko gdy user nie ma jeszcze żadnej domyślnej kategorii.
+            if (!hasDefault) {
+                rows +=
+                    CategoryInsertDto(
+                        userId = config.userId,
+                        name = default.name.trim(),
+                        icon = default.icon,
+                        color = default.colorHex,
+                        isDefault = true,
+                    )
+            }
+            if (rows.isNotEmpty()) {
+                supabase.postgrest.from("categories").insert(rows)
+            }
+            Unit
+        }
+
     override suspend fun update(id: String, input: EditCategory): Outcome<Category> =
         runCatchingDomain(supabase.isConfigured) {
-            supabase.postgrest
-                .from("categories")
-                .update(
-                    CategoryPatch(name = input.name, icon = input.icon, color = input.colorHex)
-                ) {
-                    filter {
-                        eq("user_id", config.userId)
-                        eq("id", id)
-                    }
+            supabase.postgrest.from("categories").update(
+                CategoryPatch(name = input.name, icon = input.icon, color = input.colorHex)
+            ) {
+                filter {
+                    eq("user_id", config.userId)
+                    eq("id", id)
                 }
+            }
 
             val (start, end) =
                 com.sd.kupka_pieniedzy_client.core.time.monthRange(dateProvider.today())
@@ -176,53 +213,47 @@ class SupabaseCategoryRepository(
     override suspend fun deactivate(categoryId: String, moveEntriesToId: String?): Outcome<Unit> =
         runCatchingDomain(supabase.isConfigured) {
             if (moveEntriesToId != null) {
-                supabase.postgrest
-                    .from("transactions")
-                    .update(CategoryRefPatch(categoryId = moveEntriesToId)) {
-                        filter {
-                            eq("user_id", config.userId)
-                            eq("category_id", categoryId)
-                        }
-                    }
-                supabase.postgrest
-                    .from("receipt_items")
-                    .update(CategoryRefPatch(categoryId = moveEntriesToId)) {
-                        filter {
-                            eq("user_id", config.userId)
-                            eq("category_id", categoryId)
-                        }
-                    }
-            }
-            supabase.postgrest
-                .from("budgets")
-                .delete {
+                supabase.postgrest.from("transactions").update(
+                    CategoryRefPatch(categoryId = moveEntriesToId)
+                ) {
                     filter {
                         eq("user_id", config.userId)
                         eq("category_id", categoryId)
                     }
                 }
-            supabase.postgrest
-                .from("categories")
-                .update(CategoryActivePatch(active = false)) {
+                supabase.postgrest.from("receipt_items").update(
+                    CategoryRefPatch(categoryId = moveEntriesToId)
+                ) {
                     filter {
                         eq("user_id", config.userId)
-                        eq("id", categoryId)
+                        eq("category_id", categoryId)
                     }
                 }
+            }
+            supabase.postgrest.from("budgets").delete {
+                filter {
+                    eq("user_id", config.userId)
+                    eq("category_id", categoryId)
+                }
+            }
+            supabase.postgrest.from("categories").update(CategoryActivePatch(active = false)) {
+                filter {
+                    eq("user_id", config.userId)
+                    eq("id", categoryId)
+                }
+            }
             Unit
         }
 
     private suspend fun deleteCurrentBudgets(categoryId: String, start: String, end: String) {
-        supabase.postgrest
-            .from("budgets")
-            .delete {
-                filter {
-                    eq("user_id", config.userId)
-                    eq("category_id", categoryId)
-                    lte("period_start", end)
-                    gte("period_end", start)
-                }
+        supabase.postgrest.from("budgets").delete {
+            filter {
+                eq("user_id", config.userId)
+                eq("category_id", categoryId)
+                lte("period_start", end)
+                gte("period_end", start)
             }
+        }
     }
 
     private suspend fun fetchCategories(): List<CategoryDto> =
@@ -274,12 +305,12 @@ private data class CategoryPatch(
 
 @kotlinx.serialization.Serializable
 private data class CategoryActivePatch(
-    @kotlinx.serialization.SerialName("active") val active: Boolean,
+    @kotlinx.serialization.SerialName("active") val active: Boolean
 )
 
 @kotlinx.serialization.Serializable
 private data class CategoryRefPatch(
-    @kotlinx.serialization.SerialName("category_id") val categoryId: String,
+    @kotlinx.serialization.SerialName("category_id") val categoryId: String
 )
 
 @kotlinx.serialization.Serializable
