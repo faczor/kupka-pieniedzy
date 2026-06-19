@@ -15,3 +15,4 @@ Kroki:
    (patrz CLAUDE.md → sekcja „Worktree”) i uruchom ponownie.
 
 Argumenty użytkownika (opcjonalna nazwa AVD): $ARGUMENTS
+Celem uruchomienia jest umozliwienie uzytkownikowi przejscia szybko do testowania manualnego

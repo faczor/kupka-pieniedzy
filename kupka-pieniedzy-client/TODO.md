@@ -46,3 +46,8 @@
       darmowe/prywatne; Etap A dostawałby tekst zamiast obrazu.
 - [ ] **Model ekstrakcji** — przy słabych paragonach termicznych podbić
       `EXTRACTION_MODEL` (env) na Sonnet/Opus.
+
+
+## Znane do poprawy:
+- Error zdjęcie powinna być możliwość podglądu,
+- Czy error nie powinny byc widoczne na dashboardzie dla szybszego dostepu?
