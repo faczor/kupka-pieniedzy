@@ -72,8 +72,6 @@ class DefaultEntriesService(
         val receiptsWithTx = receiptRepository.getWithTransactionForMonth(start, end).bind()
         val receiptIdByTransaction =
             receiptsWithTx.mapNotNull { r -> r.transactionId?.let { it to r.id } }.toMap()
-        // Paragony `ready` mają już transakcję (widoczne + liczone), ale czekają na zatwierdzenie
-        // kategorii — oznaczamy je w wierszu jako „do zatwierdzenia”.
         val unconfirmedTxIds =
             receiptsWithTx
                 .filter { it.status == ReceiptStatus.Ready }

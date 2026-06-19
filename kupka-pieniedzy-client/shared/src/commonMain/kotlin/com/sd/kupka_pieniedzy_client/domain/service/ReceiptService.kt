@@ -87,12 +87,8 @@ class DefaultReceiptService(
                 items = items,
             )
         receiptRepository.markReady(analyzed, raw).bind()
-        // Przetworzony paragon jest realnym wydatkiem: transakcja powstaje już teraz (status `ready`),
-        // dzięki czemu wpis od razu wpada do feedu/sum/budżetów — bez czekania na ręczne zatwierdzenie.
-        // Niuans budżetów (widok budget_progress): pozycje paragonu z przypisaną kategorią liczą się
-        // do budżetów od razu; pozycje bez kategorii (AI nie dopasowało) wchodzą tylko do sumy
-        // miesiąca, a do budżetu per (sub)kategoria trafią dopiero po zatwierdzeniu (badge „do
-        // zatwierdzenia” to sygnalizuje). Nieprzypisanej kwoty z definicji nie da się przypisać.
+        // Transakcja powstaje już przy `ready` (nie przy zapisie) — przetworzony paragon od razu
+        // jest widoczny i liczony w feedzie/sumach/budżetach.
         ensureReceiptTransaction(receiptId, analyzed.total, analyzed.store, analyzed.date).bind()
         changeNotifier.notifyTransactionsChanged()
     }
@@ -122,10 +118,8 @@ class DefaultReceiptService(
         if (draft.items.any { it.categoryId == null }) {
             fail(DomainError.Validation(ValidationRule.UnassignedReceiptItems))
         }
-        // Transakcja zwykle istnieje już od momentu analizy (`ready`). ensure pełni rolę auto-healu
-        // dla paragonów sprzed tej zmiany (transaction_id == null). Zatwierdzenie utrwala wyłącznie
-        // końcowe kategorie pozycji w receipt_items + status `saved`; sumy per (sub)kategoria
-        // wyliczają widoki (budget_progress) wprost z receipt_items.
+        // ensure = auto-heal: transakcja zwykle istnieje już od `ready`, tworzymy ją tylko dla
+        // paragonów sprzed tej zmiany (transaction_id == null).
         val transactionId =
             ensureReceiptTransaction(draft.receiptId, draft.total, draft.store, draft.date).bind()
         receiptRepository.finalize(draft.receiptId, transactionId, draft.items).bind()
@@ -133,9 +127,8 @@ class DefaultReceiptService(
     }
 
     override suspend fun deleteReceipt(receiptId: String): Outcome<Unit> = outcomeBinding {
-        // Kolejność: najpierw transakcja, potem paragon. Gdyby usunięcie transakcji zawiodło,
-        // przerywamy całość (nic nie znika) — odwrotna kolejność zostawiałaby transakcję-sierotę
-        // (FK `on delete set null`) bez możliwości cofnięcia w tej operacji.
+        // Najpierw transakcja, potem paragon — odwrotna kolejność zostawiłaby transakcję-sierotę
+        // (FK `on delete set null`) przy częściowej awarii.
         val transactionId = receiptRepository.getReceipt(receiptId).bind().transactionId
         transactionId?.let { transactionRepository.delete(it).bind() }
         receiptRepository.delete(receiptId).bind()
@@ -170,8 +163,6 @@ class DefaultReceiptService(
                         date = date,
                     )
                     .bind()
-            // Gdyby podpięcie zawiodło, transakcja zostałaby sierotą (a kolejny ensure utworzyłby
-            // duplikat) — sprzątamy ją, analogicznie do rollbacku zdjęcia w createPendingReceipt.
             receiptRepository
                 .linkTransaction(receiptId, txId)
                 .onFailure { transactionRepository.delete(txId) }
