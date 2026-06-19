@@ -16,6 +16,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.unit.dp
 import com.sd.kupka_pieniedzy_client.designsystem.component.AppText
+import com.sd.kupka_pieniedzy_client.designsystem.component.CategoryColorPickerRow
+import com.sd.kupka_pieniedzy_client.designsystem.component.CategoryIconPickerRow
 import com.sd.kupka_pieniedzy_client.designsystem.component.FormLabel
 import com.sd.kupka_pieniedzy_client.designsystem.component.FormLabelOptional
 import com.sd.kupka_pieniedzy_client.designsystem.component.IconTile
@@ -24,9 +26,7 @@ import com.sd.kupka_pieniedzy_client.designsystem.component.PrimaryButton
 import com.sd.kupka_pieniedzy_client.designsystem.component.SheetHeader
 import com.sd.kupka_pieniedzy_client.designsystem.component.TextVariant
 import com.sd.kupka_pieniedzy_client.designsystem.icon.AppIcons
-import com.sd.kupka_pieniedzy_client.designsystem.icon.CategoryIconPalette
 import com.sd.kupka_pieniedzy_client.designsystem.icon.MaterialSymbol
-import com.sd.kupka_pieniedzy_client.designsystem.theme.CategoryColorPalette
 import com.sd.kupka_pieniedzy_client.designsystem.theme.KupkaTheme
 import com.sd.kupka_pieniedzy_client.designsystem.theme.parseHexColor
 import com.sd.kupka_pieniedzy_client.localization.LocalStrings
@@ -76,30 +76,16 @@ fun ColumnScope.EditCategorySheetContent(
 
     FormLabel(strings.sectionIcon)
     Spacer(Modifier.height(10.dp))
-    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-        CategoryIconPalette.take(6).forEach { icon ->
-            IconPickCell(
-                icon = icon,
-                selected = icon == form.icon,
-                color = selectedColor,
-                onClick = { viewModel.onEditIcon(icon) },
-                modifier = Modifier.weight(1f),
-            )
-        }
-    }
+    CategoryIconPickerRow(
+        selectedIcon = form.icon,
+        selectedColor = selectedColor,
+        onPick = viewModel::onEditIcon,
+    )
     Spacer(Modifier.height(20.dp))
 
     FormLabel(strings.sectionColor)
     Spacer(Modifier.height(10.dp))
-    Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-        CategoryColorPalette.forEach { hex ->
-            ColorSwatch(
-                hex = hex,
-                selected = hex == form.colorHex,
-                onClick = { viewModel.onEditColor(hex) },
-            )
-        }
-    }
+    CategoryColorPickerRow(selectedHex = form.colorHex, onPick = viewModel::onEditColor)
     Spacer(Modifier.height(22.dp))
 
     FormLabelOptional(strings.monthlyBudget, strings.optional)

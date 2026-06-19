@@ -29,6 +29,43 @@ object PlStrings : Strings {
     override val exitDialogMessage = "Czy na pewno chcesz zamknąć Kupkę pieniędzy?"
     override val exitDialogConfirm = "Wyjdź"
 
+    // --- Onboarding ---
+    override val onboardingWelcomeTitle = "Koniec z Notatkami i Excelem."
+    override val onboardingWelcomeSubtitle =
+        "Wydatki, paragony i budżety w jednym miejscu. Wpisujesz w sekundę — resztę liczy aplikacja."
+    override val onboardingWelcomeCta = "Zaczynamy"
+    override val onboardingHaveAccount = "Masz już konto?"
+    override val onboardingSignIn = "Zaloguj się"
+
+    override val onboardingLoginTitle = "Załóż konto"
+    override val onboardingLoginSubtitle =
+        "Twoje wydatki synchronizują się i są bezpieczne na każdym urządzeniu."
+    override val onboardingContinueGoogle = "Kontynuuj z Google"
+    override val onboardingContinueApple = "Kontynuuj z Apple"
+    override val onboardingTermsNotice = "Kontynuując akceptujesz Regulamin i Politykę prywatności."
+    override val onboardingSignInError = "Nie udało się zalogować. Spróbuj ponownie."
+
+    override val onboardingCategoriesTitle = "Wybierz kategorie"
+    override val onboardingCategoriesSubtitle =
+        "Zaznacz, czego używasz. Odznacz resztę — zawsze dodasz lub zmienisz później."
+    override val onboardingAddCustomCategory = "Dodaj własną kategorię"
+    override val onboardingCategoryNewBadge = "NOWA"
+    override val onboardingAddCategoryConfirm = "Dodaj kategorię"
+    override val onboardingCategoriesError = "Nie udało się zapisać kategorii. Spróbuj ponownie."
+
+    override fun onboardingCategoriesCta(count: Int): String {
+        val noun = plChoosePlural(count, "kategoria", "kategorie", "kategorii")
+        return "Dalej · $count $noun"
+    }
+
+    override val onboardingFirstEntryTitle = "Twój pierwszy wpis"
+    override val onboardingFirstEntrySubtitle =
+        "Dodaj wydatek z ostatnich dni — zobaczysz od razu, jak liczą się budżety."
+    override val onboardingReceiptHeroSubtitle = "AI rozbije paragon na pozycje"
+    override val onboardingOrManual = "albo wpisz ręcznie"
+    override val onboardingSaveAndStart = "Zapisz i zacznij"
+    override val onboardingSkipForNow = "Pomiń na razie"
+
     override val balanceLabel = "Zostało do wydania"
     override val budgetsSection = "Budżety"
     override val recentEntriesSection = "Ostatnie wpisy"
@@ -98,7 +135,8 @@ object PlStrings : Strings {
     override val receiptFailedTitle = "Nieudane przetwarzanie"
     override val receiptFailedRowMeta = "Dotknij, aby zobaczyć szczegóły"
     override val receiptFailedSheetTitle = "Nie udało się przetworzyć paragonu"
-    override val receiptFailedReanalyzeSubtitle = "Spróbuj przeanalizować to samo zdjęcie jeszcze raz"
+    override val receiptFailedReanalyzeSubtitle =
+        "Spróbuj przeanalizować to samo zdjęcie jeszcze raz"
 
     override fun receiptFailureReasonMessage(reason: ReceiptFailureReason): String =
         when (reason) {

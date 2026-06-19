@@ -2,22 +2,26 @@ package com.sd.kupka_pieniedzy_client.data.di
 
 import com.sd.kupka_pieniedzy_client.core.config.AppConfig
 import com.sd.kupka_pieniedzy_client.core.time.DateProvider
+import com.sd.kupka_pieniedzy_client.data.auth.StubAuthService
 import com.sd.kupka_pieniedzy_client.data.repository.SupabaseAccountRepository
 import com.sd.kupka_pieniedzy_client.data.repository.SupabaseBudgetRepository
 import com.sd.kupka_pieniedzy_client.data.repository.SupabaseCategoryRepository
 import com.sd.kupka_pieniedzy_client.data.repository.SupabaseFunctionReceiptAnalysisRepository
+import com.sd.kupka_pieniedzy_client.data.repository.SupabaseOnboardingRepository
 import com.sd.kupka_pieniedzy_client.data.repository.SupabaseReceiptRepository
 import com.sd.kupka_pieniedzy_client.data.repository.SupabaseTransactionRepository
 import com.sd.kupka_pieniedzy_client.data.repository.SupabaseTrendsRepository
 import com.sd.kupka_pieniedzy_client.data.supabase.SupabaseClientProvider
-import io.ktor.client.HttpClient
+import com.sd.kupka_pieniedzy_client.domain.auth.AuthService
 import com.sd.kupka_pieniedzy_client.domain.repository.AccountRepository
 import com.sd.kupka_pieniedzy_client.domain.repository.BudgetRepository
 import com.sd.kupka_pieniedzy_client.domain.repository.CategoryRepository
+import com.sd.kupka_pieniedzy_client.domain.repository.OnboardingRepository
 import com.sd.kupka_pieniedzy_client.domain.repository.ReceiptAnalysisRepository
 import com.sd.kupka_pieniedzy_client.domain.repository.ReceiptRepository
 import com.sd.kupka_pieniedzy_client.domain.repository.TransactionRepository
 import com.sd.kupka_pieniedzy_client.domain.repository.TrendsRepository
+import io.ktor.client.HttpClient
 import org.koin.dsl.module
 
 /**
@@ -51,10 +55,18 @@ val dataModule = module {
 
     // Trendy — realne dane z widoków `month_total_spend` / `category_month_spend` (migracja 0006).
     single<TrendsRepository> {
-        SupabaseTrendsRepository(supabase = get(), config = get(), dateProvider = get<DateProvider>())
+        SupabaseTrendsRepository(
+            supabase = get(),
+            config = get(),
+            dateProvider = get<DateProvider>(),
+        )
     }
 
     single<ReceiptAnalysisRepository> {
         SupabaseFunctionReceiptAnalysisRepository(config = get(), httpClient = get())
     }
+
+    // Onboarding: flaga ukończenia (user_settings) + atrapa logowania (track UI-first).
+    single<OnboardingRepository> { SupabaseOnboardingRepository(supabase = get(), config = get()) }
+    single<AuthService> { StubAuthService(config = get()) }
 }

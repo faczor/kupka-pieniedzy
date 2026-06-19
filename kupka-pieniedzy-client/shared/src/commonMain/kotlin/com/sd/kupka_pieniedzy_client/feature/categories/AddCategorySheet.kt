@@ -1,18 +1,14 @@
 package com.sd.kupka_pieniedzy_client.feature.categories
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
@@ -21,6 +17,8 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.sd.kupka_pieniedzy_client.designsystem.component.AppText
+import com.sd.kupka_pieniedzy_client.designsystem.component.CategoryColorPickerRow
+import com.sd.kupka_pieniedzy_client.designsystem.component.CategoryIconPickerRow
 import com.sd.kupka_pieniedzy_client.designsystem.component.FormLabel
 import com.sd.kupka_pieniedzy_client.designsystem.component.FormLabelOptional
 import com.sd.kupka_pieniedzy_client.designsystem.component.IconTile
@@ -28,9 +26,6 @@ import com.sd.kupka_pieniedzy_client.designsystem.component.KupkaTextField
 import com.sd.kupka_pieniedzy_client.designsystem.component.PrimaryButton
 import com.sd.kupka_pieniedzy_client.designsystem.component.SheetHeader
 import com.sd.kupka_pieniedzy_client.designsystem.component.TextVariant
-import com.sd.kupka_pieniedzy_client.designsystem.icon.CategoryIconPalette
-import com.sd.kupka_pieniedzy_client.designsystem.icon.MaterialSymbol
-import com.sd.kupka_pieniedzy_client.designsystem.theme.CategoryColorPalette
 import com.sd.kupka_pieniedzy_client.designsystem.theme.KupkaTheme
 import com.sd.kupka_pieniedzy_client.designsystem.theme.parseHexColor
 import com.sd.kupka_pieniedzy_client.localization.LocalStrings
@@ -80,30 +75,16 @@ fun ColumnScope.AddCategorySheetContent(
 
     FormLabel(strings.sectionIcon)
     Spacer(Modifier.height(10.dp))
-    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-        CategoryIconPalette.take(6).forEach { icon ->
-            IconPickCell(
-                icon = icon,
-                selected = icon == form.icon,
-                color = selectedColor,
-                onClick = { viewModel.onIconSelect(icon) },
-                modifier = Modifier.weight(1f),
-            )
-        }
-    }
+    CategoryIconPickerRow(
+        selectedIcon = form.icon,
+        selectedColor = selectedColor,
+        onPick = viewModel::onIconSelect,
+    )
     Spacer(Modifier.height(20.dp))
 
     FormLabel(strings.sectionColor)
     Spacer(Modifier.height(10.dp))
-    Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-        CategoryColorPalette.forEach { hex ->
-            ColorSwatch(
-                hex = hex,
-                selected = hex == form.colorHex,
-                onClick = { viewModel.onColorSelect(hex) },
-            )
-        }
-    }
+    CategoryColorPickerRow(selectedHex = form.colorHex, onPick = viewModel::onColorSelect)
     Spacer(Modifier.height(22.dp))
 
     FormLabelOptional(strings.monthlyBudget, strings.optional)
@@ -131,49 +112,4 @@ fun ColumnScope.AddCategorySheetContent(
         loadingText = strings.savingCategory,
     )
     Spacer(Modifier.height(8.dp))
-}
-
-@Composable
-internal fun IconPickCell(
-    icon: String,
-    selected: Boolean,
-    color: androidx.compose.ui.graphics.Color,
-    onClick: () -> Unit,
-    modifier: Modifier = Modifier,
-) {
-    val colors = KupkaTheme.colors
-    Box(
-        modifier =
-            modifier
-                .aspectRatio(1f)
-                .clip(KupkaTheme.shapes.iconTileShape)
-                .background(if (selected) color.copy(alpha = 0.16f) else colors.surfaceCard)
-                .then(
-                    if (selected) Modifier.border(1.5.dp, color, KupkaTheme.shapes.iconTileShape)
-                    else Modifier
-                )
-                .clickable(onClick = onClick),
-        contentAlignment = Alignment.Center,
-    ) {
-        MaterialSymbol(icon, size = 24.dp, tint = if (selected) color else colors.onSurfaceMedium)
-    }
-}
-
-@Composable
-internal fun ColorSwatch(hex: String, selected: Boolean, onClick: () -> Unit) {
-    val colors = KupkaTheme.colors
-    Box(
-        modifier =
-            Modifier.size(if (selected) 38.dp else 34.dp)
-                .clip(KupkaTheme.shapes.pillShape)
-                .then(
-                    if (selected)
-                        Modifier.border(2.dp, parseHexColor(hex), KupkaTheme.shapes.pillShape)
-                    else Modifier
-                )
-                .padding(if (selected) 4.dp else 0.dp)
-                .clip(KupkaTheme.shapes.pillShape)
-                .background(parseHexColor(hex))
-                .clickable(onClick = onClick)
-    )
 }

@@ -19,6 +19,7 @@ import androidx.compose.ui.backhandler.BackHandler
 import com.sd.kupka_pieniedzy_client.core.config.AppConfig
 import com.sd.kupka_pieniedzy_client.core.config.AppConfigLoader
 import com.sd.kupka_pieniedzy_client.core.platform.rememberAppExit
+import com.sd.kupka_pieniedzy_client.core.result.Outcome
 import com.sd.kupka_pieniedzy_client.core.time.LocalToday
 import com.sd.kupka_pieniedzy_client.core.time.SystemDateProvider
 import com.sd.kupka_pieniedzy_client.data.di.dataModule
@@ -29,13 +30,16 @@ import com.sd.kupka_pieniedzy_client.designsystem.theme.KupkaTheme
 import com.sd.kupka_pieniedzy_client.di.appModule
 import com.sd.kupka_pieniedzy_client.di.domainModule
 import com.sd.kupka_pieniedzy_client.di.presentationModule
+import com.sd.kupka_pieniedzy_client.domain.service.OnboardingService
 import com.sd.kupka_pieniedzy_client.localization.AppLanguage
 import com.sd.kupka_pieniedzy_client.localization.LocalStrings
 import com.sd.kupka_pieniedzy_client.navigation.AppNavHost
 import com.sd.kupka_pieniedzy_client.navigation.LocalNavigator
 import com.sd.kupka_pieniedzy_client.navigation.Navigator
 import com.sd.kupka_pieniedzy_client.navigation.Route
+import com.sd.kupka_pieniedzy_client.navigation.isOnboarding
 import org.koin.compose.KoinApplication
+import org.koin.compose.koinInject
 
 private val FallbackConfig =
     AppConfig(
@@ -66,46 +70,80 @@ fun App() {
     KoinApplication(
         application = { modules(appModule(current), domainModule, dataModule, presentationModule) }
     ) {
-        KupkaTheme(language = AppLanguage.fromCode(current.language)) {
-            val navigator = remember { Navigator() }
-            val today = remember { SystemDateProvider().today() }
-            val strings = LocalStrings.current
-            val exitApp = rememberAppExit()
-            var showExitDialog by remember { mutableStateOf(false) }
+        KupkaTheme(language = AppLanguage.fromCode(current.language)) { AppRoot() }
+    }
+}
 
-            BackHandler(enabled = !showExitDialog) {
-                when {
-                    navigator.canPop -> navigator.pop()
-                    navigator.current != Route.Dashboard -> navigator.selectTab(Route.Dashboard)
-                    // Dialog wyjścia tylko tam, gdzie da się aplikację zamknąć (Android).
-                    // iOS: na Dashboardzie brak akcji — wyjściem z aplikacji zarządza sam OS.
-                    exitApp != null -> showExitDialog = true
+/**
+ * Korzeń UI po konfiguracji + Koinie. Decyduje o starcie — onboarding vs Dashboard — na podstawie
+ * flagi `onboarding_completed` (`user_settings`), po czym buduje [Navigator] i renderuje resztę.
+ */
+@OptIn(ExperimentalComposeUiApi::class)
+@Composable
+private fun AppRoot() {
+    val onboardingService = koinInject<OnboardingService>()
+    // TODO(auth track): gdy wejdzie prawdziwy Auth, start ma zależeć też od sesji
+    //  (AuthService.session/userId), nie tylko od flagi onboardingu — inaczej ścieżka „Zaloguj się"
+    //  (returning user) i wylogowanie pozostaną martwe.
+    val startRoute by
+        produceState<Route?>(initialValue = null) {
+            value =
+                when (val outcome = onboardingService.isCompleted()) {
+                    is Outcome.Success ->
+                        if (outcome.value) Route.Dashboard else Route.OnboardingWelcome
+                    // Błąd odczytu flagi nie może zablokować aplikacji — wpuszczamy na Dashboard.
+                    is Outcome.Failure -> Route.Dashboard
                 }
-            }
+        }
 
-            CompositionLocalProvider(LocalNavigator provides navigator, LocalToday provides today) {
-                Box(
-                    modifier =
-                        Modifier.fillMaxSize()
-                            .background(KupkaTheme.colors.surfaceBg)
-                            .safeDrawingPadding()
-                ) {
-                    AppNavHost()
-                    GlobalToastHost()
-                    KupkaConfirmDialog(
-                        visible = showExitDialog,
-                        title = strings.exitDialogTitle,
-                        message = strings.exitDialogMessage,
-                        confirmText = strings.exitDialogConfirm,
-                        dismissText = strings.cancel,
-                        onConfirm = {
-                            showExitDialog = false
-                            exitApp?.invoke()
-                        },
-                        onDismiss = { showExitDialog = false },
-                    )
-                }
-            }
+    val start = startRoute
+    if (start == null) {
+        Box(
+            modifier = Modifier.fillMaxSize().background(KupkaTheme.colors.surfaceBg),
+            contentAlignment = Alignment.Center,
+        ) {
+            CircularProgressIndicator(color = KupkaTheme.colors.primary)
+        }
+        return
+    }
+
+    val navigator = remember(start) { Navigator(start) }
+    val today = remember { SystemDateProvider().today() }
+    val strings = LocalStrings.current
+    val exitApp = rememberAppExit()
+    var showExitDialog by remember { mutableStateOf(false) }
+
+    BackHandler(enabled = !showExitDialog) {
+        when {
+            navigator.canPop -> navigator.pop()
+            // W onboardingu „wstecz” na pierwszym kroku = wyjście (Android), nie skok na Dashboard.
+            navigator.current.isOnboarding -> if (exitApp != null) showExitDialog = true
+            navigator.current != Route.Dashboard -> navigator.selectTab(Route.Dashboard)
+            // Dialog wyjścia tylko tam, gdzie da się aplikację zamknąć (Android).
+            // iOS: na Dashboardzie brak akcji — wyjściem z aplikacji zarządza sam OS.
+            exitApp != null -> showExitDialog = true
+        }
+    }
+
+    CompositionLocalProvider(LocalNavigator provides navigator, LocalToday provides today) {
+        Box(
+            modifier =
+                Modifier.fillMaxSize().background(KupkaTheme.colors.surfaceBg).safeDrawingPadding()
+        ) {
+            AppNavHost()
+            GlobalToastHost()
+            KupkaConfirmDialog(
+                visible = showExitDialog,
+                title = strings.exitDialogTitle,
+                message = strings.exitDialogMessage,
+                confirmText = strings.exitDialogConfirm,
+                dismissText = strings.cancel,
+                onConfirm = {
+                    showExitDialog = false
+                    exitApp?.invoke()
+                },
+                onDismiss = { showExitDialog = false },
+            )
         }
     }
 }

@@ -18,6 +18,7 @@ import com.sd.kupka_pieniedzy_client.designsystem.theme.KupkaTypography
 enum class TextVariant {
     HeroNumber,
     AmountInput,
+    Display,
     HeroLabel,
     Title,
     Section,
@@ -63,6 +64,7 @@ fun KupkaTypography.styleFor(variant: TextVariant): TextStyle =
     when (variant) {
         TextVariant.HeroNumber -> heroNumber
         TextVariant.AmountInput -> amountInput
+        TextVariant.Display -> display
         TextVariant.HeroLabel -> heroLabel
         TextVariant.Title -> title
         TextVariant.Section -> section
@@ -80,6 +82,7 @@ private fun defaultColor(variant: TextVariant, colors: KupkaColors): Color =
     when (variant) {
         TextVariant.HeroNumber,
         TextVariant.AmountInput,
+        TextVariant.Display,
         TextVariant.Title,
         TextVariant.Section,
         TextVariant.Body,

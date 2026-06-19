@@ -32,6 +32,14 @@ interface CategoryRepository {
 
     suspend fun create(input: NewCategory): Outcome<Category>
 
+    /**
+     * Onboarding: zakłada kategorie startowe użytkownika — [selected] (bez budżetów) oraz domyślną
+     * [default] (nieusuwalna „inne", `isDefault`). Idempotentne po nazwie wśród **aktywnych**
+     * kategorii: pomija te, które user już ma aktywne, a „inne" tworzy tylko gdy nie istnieje żadna
+     * domyślna.
+     */
+    suspend fun provisionInitial(selected: List<NewCategory>, default: NewCategory): Outcome<Unit>
+
     suspend fun update(id: String, input: EditCategory): Outcome<Category>
 
     suspend fun countEntries(categoryId: String): Outcome<Int>
@@ -85,7 +93,10 @@ interface BudgetRepository {
 interface ReceiptRepository {
     suspend fun createPending(store: String?, imagePath: String?): Outcome<String>
 
-    /** Wgrywa zdjęcie [bytes] (JPEG) do bucketu `receipts` i zapisuje `image_path` na paragonie. Zwraca ścieżkę. */
+    /**
+     * Wgrywa zdjęcie [bytes] (JPEG) do bucketu `receipts` i zapisuje `image_path` na paragonie.
+     * Zwraca ścieżkę.
+     */
     suspend fun uploadImage(receiptId: String, bytes: ByteArray): Outcome<String>
 
     /** Pobiera zdjęcie z bucketu `receipts` (do podglądu). */
@@ -100,14 +111,11 @@ interface ReceiptRepository {
     suspend fun getActive(): Outcome<List<Receipt>>
 
     /**
-     * Paragony z już utworzoną transakcją (status `ready` lub `saved`, `transaction_id` not null)
-     * i datą w okresie — do mapowania transakcja→paragon na liście oraz oznaczenia
-     * „do zatwierdzenia” (ready) vs zatwierdzony (saved).
+     * Paragony z już utworzoną transakcją (status `ready` lub `saved`, `transaction_id` not null) i
+     * datą w okresie — do mapowania transakcja→paragon na liście oraz oznaczenia „do zatwierdzenia”
+     * (ready) vs zatwierdzony (saved).
      */
-    suspend fun getWithTransactionForMonth(
-        start: LocalDate,
-        end: LocalDate,
-    ): Outcome<List<Receipt>>
+    suspend fun getWithTransactionForMonth(start: LocalDate, end: LocalDate): Outcome<List<Receipt>>
 
     suspend fun getReadyOne(): Outcome<Receipt?>
 
@@ -124,7 +132,9 @@ interface ReceiptRepository {
      */
     suspend fun markReady(receipt: AnalyzedReceipt, raw: RawReceiptAnalysis): Outcome<Unit>
 
-    /** Oznacza paragon jako nieudany ([ReceiptStatus.Failed]) z powodem — by nie wisiał w `pending`. */
+    /**
+     * Oznacza paragon jako nieudany ([ReceiptStatus.Failed]) z powodem — by nie wisiał w `pending`.
+     */
     suspend fun markFailed(receiptId: String, reason: ReceiptFailureReason): Outcome<Unit>
 
     suspend fun delete(receiptId: String): Outcome<Unit>
@@ -148,11 +158,22 @@ interface ReceiptAnalysisRepository {
     suspend fun analyze(imagePath: String): Outcome<RawReceiptAnalysis>
 }
 
+interface OnboardingRepository {
+    /** Czy bieżący user ukończył onboarding (flaga `onboarding_completed` w `user_settings`). */
+    suspend fun isCompleted(): Outcome<Boolean>
+
+    /** Oznacza onboarding bieżącego usera jako ukończony. */
+    suspend fun markCompleted(): Outcome<Unit>
+}
+
 interface TrendsRepository {
     /** Sumy wydatków per miesiąc dla ostatnich [window] miesięcy, chronologicznie. */
     suspend fun getMonthlyTotals(window: Int): Outcome<List<MonthTotal>>
 
-    /** Historia per budżet (kategorie z budżetem i bez), ostatnie [window] miesięcy, chronologicznie. */
+    /**
+     * Historia per budżet (kategorie z budżetem i bez), ostatnie [window] miesięcy,
+     * chronologicznie.
+     */
     suspend fun getBudgetHistories(window: Int): Outcome<List<BudgetHistory>>
 
     /** Bieżący (niedomknięty) miesiąc — wydatki do dziś. null, gdy brak danych w tym miesiącu. */

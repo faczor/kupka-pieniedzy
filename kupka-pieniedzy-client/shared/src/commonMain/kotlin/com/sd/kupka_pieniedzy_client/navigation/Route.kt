@@ -5,6 +5,16 @@ sealed interface Route {
     val isTopLevel: Boolean
         get() = false
 
+    // --- Onboarding (jednorazowy, każdy krok = osobny Route na stosie) ---
+    data object OnboardingWelcome : Route
+
+    /** Logowanie. [returning]=true → użytkownik wraca (po logowaniu prosto na Dashboard). */
+    data class OnboardingLogin(val returning: Boolean) : Route
+
+    data object OnboardingCategories : Route
+
+    data object OnboardingFirstEntry : Route
+
     data object Dashboard : Route {
         override val isTopLevel = true
     }
@@ -35,3 +45,11 @@ sealed interface Route {
 /** Kolejność zakładek w dolnym pasku (Home · Wpisy · Budżety · Szukaj). */
 val TopLevelRoutes: List<Route> =
     listOf(Route.Dashboard, Route.Entries, Route.Categories, Route.Search)
+
+/** Czy [Route] należy do przepływu onboardingu (inny back-stack, brak dolnego paska). */
+val Route.isOnboarding: Boolean
+    get() =
+        this is Route.OnboardingWelcome ||
+            this is Route.OnboardingLogin ||
+            this is Route.OnboardingCategories ||
+            this is Route.OnboardingFirstEntry

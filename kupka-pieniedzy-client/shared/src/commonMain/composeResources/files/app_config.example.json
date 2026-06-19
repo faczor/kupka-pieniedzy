@@ -1,7 +1,7 @@
 {
   "supabaseUrl": "https://xxxx.supabase.co",
   "supabaseAnonKey": "<anon key z Supabase: Settings -> API>",
-  "userId": "00000000-0000-0000-0000-000000000001",
+  "userId": "00000000-0000-0000-0000-000000000002",
   "defaultCurrency": "PLN",
   "language": "pl"
 }

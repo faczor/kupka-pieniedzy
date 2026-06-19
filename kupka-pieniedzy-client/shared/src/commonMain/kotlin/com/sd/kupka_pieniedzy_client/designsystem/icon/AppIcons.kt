@@ -7,6 +7,7 @@ package com.sd.kupka_pieniedzy_client.designsystem.icon
 object AppIcons {
     const val Add = "add"
     const val ArrowBack = "arrow_back"
+    const val ArrowForward = "arrow_forward"
     const val Close = "close"
     const val ChevronRight = "chevron_right"
     const val ChevronLeft = "chevron_left"

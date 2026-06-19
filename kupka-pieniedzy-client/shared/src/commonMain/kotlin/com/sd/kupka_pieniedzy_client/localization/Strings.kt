@@ -35,6 +35,39 @@ interface Strings {
     val exitDialogMessage: String
     val exitDialogConfirm: String
 
+    // --- Onboarding ---
+    val onboardingWelcomeTitle: String
+    val onboardingWelcomeSubtitle: String
+    val onboardingWelcomeCta: String
+    val onboardingHaveAccount: String
+    val onboardingSignIn: String
+
+    // Logowanie (krok 1/3)
+    val onboardingLoginTitle: String
+    val onboardingLoginSubtitle: String
+    val onboardingContinueGoogle: String
+    val onboardingContinueApple: String
+    val onboardingTermsNotice: String
+    val onboardingSignInError: String
+
+    // Wybór kategorii (krok 2/3)
+    val onboardingCategoriesTitle: String
+    val onboardingCategoriesSubtitle: String
+    val onboardingAddCustomCategory: String
+    val onboardingCategoryNewBadge: String
+    val onboardingAddCategoryConfirm: String
+    val onboardingCategoriesError: String
+
+    fun onboardingCategoriesCta(count: Int): String
+
+    // Pierwszy wpis (krok 3/3)
+    val onboardingFirstEntryTitle: String
+    val onboardingFirstEntrySubtitle: String
+    val onboardingReceiptHeroSubtitle: String
+    val onboardingOrManual: String
+    val onboardingSaveAndStart: String
+    val onboardingSkipForNow: String
+
     // --- Dashboard ---
     val balanceLabel: String
     val budgetsSection: String
@@ -199,6 +232,7 @@ interface Strings {
     fun categoryDeletedTitle(name: String): String
 
     fun categoryDeletedMovedSubtitle(count: Int, name: String): String
+
     val retryShort: String
     val toastErrorSubtitle: String
     val expenseSavedTitle: String

@@ -7,6 +7,10 @@ import com.sd.kupka_pieniedzy_client.feature.addexpense.ManualExpenseScreen
 import com.sd.kupka_pieniedzy_client.feature.categories.CategoriesScreen
 import com.sd.kupka_pieniedzy_client.feature.dashboard.DashboardScreen
 import com.sd.kupka_pieniedzy_client.feature.entries.EntriesScreen
+import com.sd.kupka_pieniedzy_client.feature.onboarding.OnboardingCategoriesScreen
+import com.sd.kupka_pieniedzy_client.feature.onboarding.OnboardingFirstEntryScreen
+import com.sd.kupka_pieniedzy_client.feature.onboarding.OnboardingLoginScreen
+import com.sd.kupka_pieniedzy_client.feature.onboarding.OnboardingWelcomeScreen
 import com.sd.kupka_pieniedzy_client.feature.placeholder.PlaceholderScreen
 import com.sd.kupka_pieniedzy_client.feature.receipt.ReceiptScreen
 import com.sd.kupka_pieniedzy_client.feature.trends.TrendsBudgetDetailScreen
@@ -21,6 +25,11 @@ fun AppNavHost() {
 
     Crossfade(targetState = nav.current) { route ->
         when (route) {
+            // --- Onboarding (Welcome realny; pozostałe kroki to placeholder do części C/D/E) ---
+            Route.OnboardingWelcome -> OnboardingWelcomeScreen()
+            is Route.OnboardingLogin -> OnboardingLoginScreen(returning = route.returning)
+            Route.OnboardingCategories -> OnboardingCategoriesScreen()
+            Route.OnboardingFirstEntry -> OnboardingFirstEntryScreen()
             Route.Dashboard -> DashboardScreen()
             Route.Categories -> CategoriesScreen()
             Route.Entries -> EntriesScreen()

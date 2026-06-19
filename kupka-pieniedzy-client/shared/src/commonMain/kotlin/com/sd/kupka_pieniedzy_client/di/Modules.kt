@@ -10,12 +10,14 @@ import com.sd.kupka_pieniedzy_client.domain.service.CategoryService
 import com.sd.kupka_pieniedzy_client.domain.service.DashboardService
 import com.sd.kupka_pieniedzy_client.domain.service.DefaultCategoryService
 import com.sd.kupka_pieniedzy_client.domain.service.DefaultDashboardService
-import com.sd.kupka_pieniedzy_client.domain.service.DefaultExpenseService
 import com.sd.kupka_pieniedzy_client.domain.service.DefaultEntriesService
+import com.sd.kupka_pieniedzy_client.domain.service.DefaultExpenseService
+import com.sd.kupka_pieniedzy_client.domain.service.DefaultOnboardingService
 import com.sd.kupka_pieniedzy_client.domain.service.DefaultReceiptService
 import com.sd.kupka_pieniedzy_client.domain.service.DefaultTrendsService
 import com.sd.kupka_pieniedzy_client.domain.service.EntriesService
 import com.sd.kupka_pieniedzy_client.domain.service.ExpenseService
+import com.sd.kupka_pieniedzy_client.domain.service.OnboardingService
 import com.sd.kupka_pieniedzy_client.domain.service.ReceiptService
 import com.sd.kupka_pieniedzy_client.domain.service.TrendsService
 import com.sd.kupka_pieniedzy_client.feature.addexpense.AddExpenseViewModel
@@ -23,6 +25,9 @@ import com.sd.kupka_pieniedzy_client.feature.addexpense.ManualExpenseViewModel
 import com.sd.kupka_pieniedzy_client.feature.categories.CategoriesViewModel
 import com.sd.kupka_pieniedzy_client.feature.dashboard.DashboardViewModel
 import com.sd.kupka_pieniedzy_client.feature.entries.EntriesViewModel
+import com.sd.kupka_pieniedzy_client.feature.onboarding.OnboardingCategoriesViewModel
+import com.sd.kupka_pieniedzy_client.feature.onboarding.OnboardingFinishViewModel
+import com.sd.kupka_pieniedzy_client.feature.onboarding.OnboardingLoginViewModel
 import com.sd.kupka_pieniedzy_client.feature.receipt.ReceiptViewModel
 import com.sd.kupka_pieniedzy_client.feature.trends.TrendsBudgetDetailViewModel
 import com.sd.kupka_pieniedzy_client.feature.trends.TrendsViewModel
@@ -45,6 +50,7 @@ val domainModule: Module = module {
     single<DashboardService> { DefaultDashboardService(get(), get(), get(), get()) }
     single<EntriesService> { DefaultEntriesService(get(), get(), get(), get(), get()) }
     single<TrendsService> { DefaultTrendsService(get()) }
+    single<OnboardingService> { DefaultOnboardingService(get()) }
     single<ReceiptService> {
         DefaultReceiptService(get(), get(), get(), get(), get(), get(), get())
     }
@@ -60,4 +66,7 @@ val presentationModule: Module = module {
     viewModelOf(::ManualExpenseViewModel)
     viewModelOf(::CategoriesViewModel)
     viewModelOf(::ReceiptViewModel)
+    viewModelOf(::OnboardingLoginViewModel)
+    viewModelOf(::OnboardingCategoriesViewModel)
+    viewModelOf(::OnboardingFinishViewModel)
 }
