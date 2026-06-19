@@ -6,7 +6,7 @@ import androidx.compose.runtime.remember
 
 /** Android: kończy bieżącą Activity, zwracając użytkownika do systemu. */
 @Composable
-actual fun rememberAppExit(): () -> Unit {
+actual fun rememberAppExit(): (() -> Unit)? {
     val activity = LocalActivity.current
     return remember(activity) { { activity?.finish() } }
 }
