@@ -86,5 +86,5 @@ val dataModule = module {
 
     // Auth: prawdziwy Supabase GoTrue (OTP + Apple). Stub zostaje pod tryb dev (niebindowany).
     single<AuthService> { SupabaseAuthService(supabase = get()) }
-    single { CurrentUserProvider(supabase = get(), config = get()) }
+    single { CurrentUserProvider(supabase = get()) }
 }
