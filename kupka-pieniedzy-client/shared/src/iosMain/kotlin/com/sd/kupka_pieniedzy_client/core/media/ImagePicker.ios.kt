@@ -7,6 +7,7 @@ import kotlinx.cinterop.ExperimentalForeignApi
 import kotlinx.cinterop.addressOf
 import kotlinx.cinterop.usePinned
 import platform.Foundation.NSData
+import platform.Foundation.NSItemProvider
 import platform.PhotosUI.PHPickerConfiguration
 import platform.PhotosUI.PHPickerFilter
 import platform.PhotosUI.PHPickerResult
@@ -65,7 +66,7 @@ private class PickerDelegate(private val onResult: (PickedImage?) -> Unit) :
 
         val provider = result.itemProvider
         val identifier = result.assetIdentifier ?: "ios-photo"
-        val typeId = provider.registeredTypeIdentifiers.firstOrNull() as? String ?: "public.image"
+        val typeId = provider.preferredStillImageTypeIdentifier()
         provider.loadDataRepresentationForTypeIdentifier(typeId) { data, _ ->
             // Na tej (prywatnej) kolejce transkodujemy HEIC/duże zdjęcia -> JPEG ~1568 px,
             // bo Claude vision nie przyjmuje HEIC. Dopiero wynik wracamy na main.
@@ -74,6 +75,25 @@ private class PickerDelegate(private val onResult: (PickedImage?) -> Unit) :
             dispatch_async(dispatch_get_main_queue()) { onResult(picked) }
         }
     }
+}
+
+/**
+ * Wybiera identyfikator typu **statycznej klatki** zdjęcia do wczytania.
+ *
+ * Dla Live Photo `registeredTypeIdentifiers` zawiera też bundle (zdjęcie + film), który na początku
+ * listy potrafi wygrać z `firstOrNull()`. Wczytanie bundla daje dane, których `UIImage` nie dekoduje,
+ * a normalizer w fallbacku wysyła oryginał — i Claude vision dostaje nie-obraz. Dlatego pomijamy
+ * bundle Live Photo i preferujemy znane formaty statyczne (JPEG/HEIC/PNG), które normalizer
+ * przekoduje do JPEG.
+ */
+private fun NSItemProvider.preferredStillImageTypeIdentifier(): String {
+    val ids = registeredTypeIdentifiers.filterIsInstance<String>()
+    val still = ids.filterNot { it.contains("live-photo", ignoreCase = true) }
+    return still.firstOrNull { it == "public.jpeg" }
+        ?: still.firstOrNull { it == "public.heic" || it == "public.heif" }
+        ?: still.firstOrNull { it == "public.png" }
+        ?: still.firstOrNull()
+        ?: "public.image"
 }
 
 private fun topViewController(): UIViewController? {
