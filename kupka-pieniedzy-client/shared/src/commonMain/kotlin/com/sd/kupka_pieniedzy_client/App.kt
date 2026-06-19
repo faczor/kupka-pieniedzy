@@ -77,7 +77,9 @@ fun App() {
                 when {
                     navigator.canPop -> navigator.pop()
                     navigator.current != Route.Dashboard -> navigator.selectTab(Route.Dashboard)
-                    else -> showExitDialog = true
+                    // Dialog wyjścia tylko tam, gdzie da się aplikację zamknąć (Android).
+                    // iOS: na Dashboardzie brak akcji — wyjściem z aplikacji zarządza sam OS.
+                    exitApp != null -> showExitDialog = true
                 }
             }
 
@@ -98,7 +100,7 @@ fun App() {
                         dismissText = strings.cancel,
                         onConfirm = {
                             showExitDialog = false
-                            exitApp()
+                            exitApp?.invoke()
                         },
                         onDismiss = { showExitDialog = false },
                     )
