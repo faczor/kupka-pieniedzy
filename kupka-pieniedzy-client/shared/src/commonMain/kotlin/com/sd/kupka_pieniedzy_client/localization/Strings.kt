@@ -55,13 +55,17 @@ interface Strings {
 
     fun onboardingCodeSubtitle(email: String): String
 
-    val onboardingCodePlaceholder: String
     val onboardingVerifyCode: String
     val onboardingCodeError: String
     val onboardingNoCode: String
     val onboardingResendCode: String
     val onboardingTermsNotice: String
     val onboardingSignInError: String
+
+    // Profil
+    val profileTitle: String
+    val profileAccount: String
+    val profileLogout: String
 
     // Wybór kategorii (krok 2/3)
     val onboardingCategoriesTitle: String

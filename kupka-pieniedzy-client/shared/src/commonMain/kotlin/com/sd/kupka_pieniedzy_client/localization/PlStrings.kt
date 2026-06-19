@@ -50,13 +50,16 @@ object PlStrings : Strings {
 
     override fun onboardingCodeSubtitle(email: String) = "Wysłaliśmy 6-cyfrowy kod na $email."
 
-    override val onboardingCodePlaceholder = "______"
     override val onboardingVerifyCode = "Zaloguj"
     override val onboardingCodeError = "Nieprawidłowy lub wygasły kod. Spróbuj ponownie."
     override val onboardingNoCode = "Nie dostałeś kodu?"
     override val onboardingResendCode = "Wyślij ponownie"
     override val onboardingTermsNotice = "Kontynuując akceptujesz Regulamin i Politykę prywatności."
     override val onboardingSignInError = "Nie udało się zalogować. Spróbuj ponownie."
+
+    override val profileTitle = "Profil"
+    override val profileAccount = "Twoje konto"
+    override val profileLogout = "Wyloguj się"
 
     override val onboardingCategoriesTitle = "Wybierz kategorie"
     override val onboardingCategoriesSubtitle =

@@ -93,6 +93,7 @@ fun DashboardScreen() {
                     onSeeAllBudgets = { nav.selectTab(Route.Categories) },
                     onSeeAllEntries = { nav.selectTab(Route.Entries) },
                     onSeeTrends = { nav.push(Route.Trends) },
+                    onProfile = { nav.push(Route.Profile) },
                 )
             }
             if (state is ScreenState.Content) {
@@ -143,6 +144,7 @@ private fun DashboardContent(
     onSeeAllBudgets: () -> Unit,
     onSeeAllEntries: () -> Unit,
     onSeeTrends: () -> Unit,
+    onProfile: () -> Unit,
 ) {
     val colors = KupkaTheme.colors
     val strings = LocalStrings.current
@@ -166,7 +168,8 @@ private fun DashboardContent(
                 modifier =
                     Modifier.size(36.dp)
                         .clip(KupkaTheme.shapes.pillShape)
-                        .background(colors.primary.copy(alpha = 0.16f)),
+                        .background(colors.primary.copy(alpha = 0.16f))
+                        .clickable(onClick = onProfile),
                 contentAlignment = Alignment.Center,
             ) {
                 MaterialSymbol("person", size = 20.dp, tint = colors.primaryHover)

@@ -18,6 +18,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.sd.kupka_pieniedzy_client.core.error.DomainError
 import com.sd.kupka_pieniedzy_client.designsystem.component.AppText
 import com.sd.kupka_pieniedzy_client.designsystem.component.KupkaTextField
+import com.sd.kupka_pieniedzy_client.designsystem.component.OtpCodeInput
 import com.sd.kupka_pieniedzy_client.designsystem.component.PrimaryButton
 import com.sd.kupka_pieniedzy_client.designsystem.component.TextVariant
 import com.sd.kupka_pieniedzy_client.designsystem.theme.KupkaTheme
@@ -181,11 +182,10 @@ private fun CodeStep(state: OnboardingLoginUiState, vm: OnboardingLoginViewModel
     )
     Spacer(Modifier.height(spacing.xxxl))
 
-    KupkaTextField(
+    OtpCodeInput(
         value = state.code,
         onValueChange = vm::onCodeChange,
-        placeholder = strings.onboardingCodePlaceholder,
-        keyboardType = KeyboardType.NumberPassword,
+        length = OnboardingLoginUiState.CODE_LENGTH,
     )
     Spacer(Modifier.height(spacing.m))
     PrimaryButton(
