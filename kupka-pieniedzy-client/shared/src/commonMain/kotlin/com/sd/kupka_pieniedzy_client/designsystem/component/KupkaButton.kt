@@ -93,21 +93,22 @@ private fun SpinningSymbol(tint: Color) {
     )
 }
 
-/** Drugorzędne CTA na powierzchni (np. „Wróć do rozbicia”). */
+/** Drugorzędne CTA na powierzchni (np. „Wróć do rozbicia”). [enabled]=false wygasza i blokuje klik. */
 @Composable
 fun SurfaceButton(
     text: String,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
     leadingIcon: String? = null,
+    enabled: Boolean = true,
 ) {
     val colors = KupkaTheme.colors
     ButtonSurface(
-        background = Color.White.copy(alpha = 0.08f),
-        foreground = colors.onSurfaceHigh,
+        background = Color.White.copy(alpha = if (enabled) 0.08f else 0.04f),
+        foreground = colors.onSurfaceHigh.copy(alpha = if (enabled) 1f else 0.4f),
         text = text,
         leadingIcon = leadingIcon,
-        onClick = onClick,
+        onClick = onClick.takeIf { enabled },
         modifier = modifier,
     )
 }

@@ -2,6 +2,7 @@ package com.sd.kupka_pieniedzy_client.feature.profile
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.sd.kupka_pieniedzy_client.core.error.DomainError
 import com.sd.kupka_pieniedzy_client.core.logging.AppLog
 import com.sd.kupka_pieniedzy_client.core.logging.action
 import com.sd.kupka_pieniedzy_client.core.logging.failure
@@ -13,26 +14,29 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
+data class ProfileUiState(val loggingOut: Boolean = false, val error: DomainError? = null)
+
 class ProfileViewModel(private val authService: AuthService) : ViewModel() {
 
-    private val _loggingOut = MutableStateFlow(false)
-    val loggingOut: StateFlow<Boolean> = _loggingOut.asStateFlow()
+    private val _state = MutableStateFlow(ProfileUiState())
+    val state: StateFlow<ProfileUiState> = _state.asStateFlow()
 
     /**
      * Wylogowanie. Po sukcesie `AuthService.status` → `Unauthenticated`, a gating w `App.kt`
      * przebudowuje `AppShell` od korzenia na powitanie (cały stos nawigacji znika) — dlatego nie
-     * resetujemy tu stanu na sukcesie (ekran i tak zostaje zdjęty).
+     * resetujemy tu stanu na sukcesie (ekran i tak zostaje zdjęty). Na porażce wystawiamy [error]
+     * do UI (samo zalogowanie nie wystarcza — user musi widzieć, że klik nie zadziałał).
      */
     fun logout() {
-        if (_loggingOut.value) return
+        if (_state.value.loggingOut) return
         AppLog.action("Profile.logout")
-        _loggingOut.update { true }
+        _state.update { it.copy(loggingOut = true, error = null) }
         viewModelScope.launch {
             authService.signOut().fold(
                 onSuccess = {},
                 onFailure = { e ->
                     AppLog.failure("Profile.logout", e)
-                    _loggingOut.update { false }
+                    _state.update { it.copy(loggingOut = false, error = e) }
                 },
             )
         }

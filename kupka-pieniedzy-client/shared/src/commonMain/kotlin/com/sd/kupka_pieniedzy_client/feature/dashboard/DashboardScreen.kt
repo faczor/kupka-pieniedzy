@@ -28,6 +28,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.sd.kupka_pieniedzy_client.core.media.rememberImagePicker
 import com.sd.kupka_pieniedzy_client.core.money.MoneyFormatter
 import com.sd.kupka_pieniedzy_client.core.presentation.ScreenState
+import com.sd.kupka_pieniedzy_client.designsystem.component.AccountAvatar
 import com.sd.kupka_pieniedzy_client.designsystem.component.AppText
 import com.sd.kupka_pieniedzy_client.designsystem.component.AsyncBanner
 import com.sd.kupka_pieniedzy_client.designsystem.component.BudgetRow
@@ -164,16 +165,7 @@ private fun DashboardContent(
                 variant = TextVariant.HeroLabel,
                 color = colors.onSurfaceLow,
             )
-            Box(
-                modifier =
-                    Modifier.size(36.dp)
-                        .clip(KupkaTheme.shapes.pillShape)
-                        .background(colors.primary.copy(alpha = 0.16f))
-                        .clickable(onClick = onProfile),
-                contentAlignment = Alignment.Center,
-            ) {
-                MaterialSymbol("person", size = 20.dp, tint = colors.primaryHover)
-            }
+            AccountAvatar(onClick = onProfile)
         }
 
         AppText(

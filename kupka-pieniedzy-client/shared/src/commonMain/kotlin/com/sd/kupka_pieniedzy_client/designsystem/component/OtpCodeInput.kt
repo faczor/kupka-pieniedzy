@@ -49,7 +49,7 @@ fun OtpCodeInput(
         decorationBox = {
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                horizontalArrangement = Arrangement.spacedBy(KupkaTheme.spacing.s),
             ) {
                 repeat(length) { index ->
                     val char = value.getOrNull(index)?.toString().orEmpty()
