@@ -59,6 +59,8 @@ Zanim cokolwiek zgłosisz, poznaj „źródła prawdy" tego repo (czytaj/grepuj,
 - **Rozsądna ilość — nie przesadzona:** TAK dla błędów i akcji użytkownika; NIE dla logowania w pętli renderu / hot-path / per-frame / per-element listy; NIE dla zostawionych logów debug, `println`, zakomentowanego kodu.
 - Repozytoria Supabase: błędy powinny iść przez `runCatchingDomain` (mapowanie na `DomainError`), nie gołe `try/catch` gubiące kontekst.
 
+### 5. Brak zbędnych komentarzy
+
 ## Krok 4 — raport
 
 Zwróć zwięzły, konkretny raport **po polsku**, pogrupowany wg 4 wymiarów. Dla każdego znaleziska:
