@@ -131,6 +131,7 @@ object PlStrings : Strings {
     override val saveExpense = "Zapisz wydatek"
 
     override val receiptTitle = "Paragon"
+    override val confirmReceiptExpense = "Zatwierdź wydatek"
 
     override fun itemsHeader(count: Int): String {
         val word = plChoosePlural(count, "POZYCJA", "POZYCJE", "POZYCJI")
@@ -158,8 +159,6 @@ object PlStrings : Strings {
     }
 
     override val itemCategorySheetTitle = "Kategoria pozycji"
-    override val groceriesSubcategoriesLabel = "Sub-kategorie spożywki"
-    override val newSubcategory = "Nowa sub-kategoria"
 
     override fun assignCategory(category: String) = "Przypisz $category"
 
@@ -173,11 +172,6 @@ object PlStrings : Strings {
     override val actionDeleteReceiptSubtitle = "Nie można cofnąć"
 
     override val categoriesTitle = "Kategorie"
-
-    override fun subcategoriesCount(count: Int): String {
-        val word = plChoosePlural(count, "sub-kategoria", "sub-kategorie", "sub-kategorii")
-        return "$count $word"
-    }
 
     override val defaultBadge = "DOMYŚLNA"
     override val defaultCategoryHint = "Gdy nic nie pasuje"

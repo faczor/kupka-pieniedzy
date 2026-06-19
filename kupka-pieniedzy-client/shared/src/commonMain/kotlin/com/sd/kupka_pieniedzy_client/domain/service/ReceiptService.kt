@@ -194,11 +194,11 @@ class DefaultReceiptService(
         }
     }
 
-    /** Kategoria nagłówka transakcji paragonu: L1 „spożywka”, a w razie braku — domyślna („inne”). */
+    /** Kategoria nagłówka transakcji paragonu: „spożywka”, a w razie braku — domyślna („inne”). */
     private suspend fun resolveReceiptCategoryId(): Outcome<String> = outcomeBinding {
         val categories = categoryRepository.getAll().bind()
         categories
-            .firstOrNull { it.level == 1 && it.name.equals(GROCERIES_L1_NAME, ignoreCase = true) }
+            .firstOrNull { it.name.equals(GROCERIES_L1_NAME, ignoreCase = true) }
             ?.id ?: categoryRepository.getDefault().bind().id
     }
 }

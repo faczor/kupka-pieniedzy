@@ -23,7 +23,7 @@ import kotlinx.coroutines.launch
 data class ReceiptUiState(
     val draft: AnalyzedReceipt? = null,
     val categoriesById: Map<String, Category> = emptyMap(),
-    val subcategories: List<Category> = emptyList(),
+    val categories: List<Category> = emptyList(),
     val loading: Boolean = true,
     val loadError: DomainError? = null,
     val saving: Boolean = false,
@@ -71,15 +71,11 @@ class ReceiptViewModel(
                                     _state.update { it.copy(loading = false, loadError = e) }
                                 },
                                 onSuccess = { cats ->
-                                    val subs =
-                                        categoryService
-                                            .getGroceriesSubcategories()
-                                            .fold(onSuccess = { it }, onFailure = { emptyList() })
                                     _state.update {
                                         it.copy(
                                             draft = draft,
                                             categoriesById = cats.associateBy { c -> c.id },
-                                            subcategories = subs,
+                                            categories = cats,
                                             loading = false,
                                         )
                                     }

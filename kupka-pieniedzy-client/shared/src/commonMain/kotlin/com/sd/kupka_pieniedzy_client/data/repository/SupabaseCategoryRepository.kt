@@ -18,8 +18,6 @@ import com.sd.kupka_pieniedzy_client.domain.repository.CategoryRepository
 import io.github.jan.supabase.postgrest.query.Columns
 import io.github.jan.supabase.postgrest.query.Order
 
-private const val GROCERIES_L1_NAME = "spożywka"
-
 /**
  * Kategorie + ich budżet bieżącego miesiąca. Budżety dociągamy osobnym zapytaniem (`budgets`
  * obejmujące „dziś") i łączymy w pamięci po `category_id` — domena [Category] wymaga
@@ -71,19 +69,6 @@ class SupabaseCategoryRepository(
             dto.toDomain(config.defaultCurrency, budgetMinor = currentBudgetsByCategory()[dto.id])
         }
 
-    override suspend fun getGroceriesSubcategories(): Outcome<List<Category>> =
-        runCatchingDomain(supabase.isConfigured) {
-            val all = fetchCategories()
-            val groceriesId =
-                all.firstOrNull {
-                        it.level == 1 && it.name.equals(GROCERIES_L1_NAME, ignoreCase = true)
-                    }
-                    ?.id
-            val budgets = currentBudgetsByCategory()
-            all.filter { it.parentId != null && it.parentId == groceriesId }
-                .map { it.toDomain(config.defaultCurrency, budgetMinor = budgets[it.id]) }
-        }
-
     override suspend fun create(input: NewCategory): Outcome<Category> =
         runCatchingDomain(supabase.isConfigured) {
             val insert =
@@ -92,10 +77,7 @@ class SupabaseCategoryRepository(
                     name = input.name,
                     icon = input.icon,
                     color = input.colorHex,
-                    level = 1,
-                    parentId = null,
                     isDefault = false,
-                    isDynamic = false,
                 )
             val created =
                 supabase.postgrest
@@ -251,7 +233,6 @@ class SupabaseCategoryRepository(
                     eq("user_id", config.userId)
                     eq("active", true)
                 }
-                order("level", Order.ASCENDING)
                 order("name", Order.ASCENDING)
             }
             .decodeList<CategoryDto>()

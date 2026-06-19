@@ -110,7 +110,7 @@ fun ReceiptScreen(receiptId: String) {
             editingItem?.let { item ->
                 ChangeCategorySheetContent(
                     item = item,
-                    subcategories = state.subcategories,
+                    categories = state.categories,
                     onAssign = { categoryId ->
                         vm.assignCategory(item.id, categoryId)
                         editingItem = null
@@ -161,21 +161,25 @@ private fun ReceiptBreakdown(
                     .verticalScroll(rememberScrollState())
                     .padding(horizontal = 20.dp)
         ) {
-            if (draft.isHighConfidence) {
-                ReceiptHeaderCard(
-                    store = draft.store,
-                    dateLabel = relativeDayLabel(draft.date, today, strings),
-                    total = MoneyFormatter.format(draft.total),
-                    confidencePercent = draft.confidencePercent,
-                    image = state.image,
-                    onThumbnailClick = onThumbnailClick,
-                    modifier = Modifier.padding(top = 4.dp),
-                )
-            } else {
+            // Hero zawsze widoczny — miniatura zdjęcia i suma przydają się
+            // najbardziej właśnie przy niskiej pewności (weryfikacja pozycji).
+            ReceiptHeaderCard(
+                store = draft.store,
+                dateLabel = relativeDayLabel(draft.date, today, strings),
+                total = MoneyFormatter.format(draft.total),
+                confidencePercent = draft.confidencePercent,
+                isHighConfidence = draft.isHighConfidence,
+                image = state.image,
+                onThumbnailClick = onThumbnailClick,
+                modifier = Modifier.padding(top = 4.dp),
+            )
+
+            // Ostrzeżenie tylko jako dodatek nad listą, gdy pewność jest niska.
+            if (!draft.isHighConfidence) {
                 WarnBanner(
                     title = strings.lowConfidenceTitle(draft.confidencePercent),
                     subtitle = strings.unassignedItems(state.unassignedCount),
-                    modifier = Modifier.padding(top = 4.dp),
+                    modifier = Modifier.padding(top = 12.dp),
                 )
             }
 
@@ -219,7 +223,7 @@ private fun ReceiptBreakdown(
                     .padding(horizontal = 20.dp, vertical = 12.dp)
         ) {
             if (state.canSave) {
-                PrimaryButton(text = strings.saveExpense, onClick = onSave)
+                PrimaryButton(text = strings.confirmReceiptExpense, onClick = onSave)
             } else {
                 PrimaryButton(
                     text = strings.completeCategoriesCta(state.unassignedCount),
@@ -238,6 +242,7 @@ private fun ReceiptHeaderCard(
     dateLabel: String,
     total: String,
     confidencePercent: Int,
+    isHighConfidence: Boolean,
     image: ScreenState<ByteArray>?,
     onThumbnailClick: () -> Unit,
     modifier: Modifier = Modifier,
@@ -245,6 +250,8 @@ private fun ReceiptHeaderCard(
     val colors = KupkaTheme.colors
     val thumbnail =
         remember(image) { (image as? ScreenState.Content)?.value?.let(::decodeReceiptBitmap) }
+    val confidenceColor = if (isHighConfidence) colors.budgetGreenFill else colors.budgetYellowFill
+    val confidenceIcon = if (isHighConfidence) AppIcons.CheckCircle else AppIcons.Warning
     Row(
         modifier =
             modifier
@@ -301,11 +308,11 @@ private fun ReceiptHeaderCard(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(4.dp),
             ) {
-                MaterialSymbol(AppIcons.CheckCircle, size = 13.dp, tint = colors.budgetGreenFill)
+                MaterialSymbol(confidenceIcon, size = 13.dp, tint = confidenceColor)
                 Text(
                     "$confidencePercent%",
                     style = KupkaTheme.typography.caption.copy(textAlign = TextAlign.End),
-                    color = colors.budgetGreenFill,
+                    color = confidenceColor,
                 )
             }
         }
