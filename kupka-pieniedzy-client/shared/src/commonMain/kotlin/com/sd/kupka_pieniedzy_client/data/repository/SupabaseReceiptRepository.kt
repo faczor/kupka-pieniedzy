@@ -1,6 +1,7 @@
 package com.sd.kupka_pieniedzy_client.data.repository
 
 import com.sd.kupka_pieniedzy_client.core.config.AppConfig
+import com.sd.kupka_pieniedzy_client.core.logging.AppLog
 import com.sd.kupka_pieniedzy_client.core.result.Outcome
 import com.sd.kupka_pieniedzy_client.data.dto.ReceiptDto
 import com.sd.kupka_pieniedzy_client.data.dto.ReceiptInsertDto
@@ -21,6 +22,9 @@ import com.sd.kupka_pieniedzy_client.domain.repository.ReceiptRepository
 import io.github.jan.supabase.postgrest.query.Order
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.encodeToJsonElement
+
+/** Prywatny bucket Storage na zdjęcia paragonów (zob. migracja 0007). */
+internal const val RECEIPTS_BUCKET = "receipts"
 
 class SupabaseReceiptRepository(
     private val supabase: SupabaseClientProvider,
@@ -44,6 +48,51 @@ class SupabaseReceiptRepository(
                 .insert(insert) { select() }
                 .decodeSingle<ReceiptDto>()
                 .id
+        }
+
+    override suspend fun uploadImage(receiptId: String, bytes: ByteArray): Outcome<String> =
+        runCatchingDomain(supabase.isConfigured) {
+            // Konwencja ścieżki: `<user_id>/<receipt_id>.jpg` (pierwszy segment = user_id pod przyszłe RLS).
+            val path = "${config.userId}/$receiptId.jpg"
+            supabase.storage.from(RECEIPTS_BUCKET).upload(path, bytes) { upsert = true }
+            supabase.postgrest.from("receipts").update(ReceiptImagePathPatch(imagePath = path)) {
+                filter {
+                    eq("user_id", config.userId)
+                    eq("id", receiptId)
+                }
+            }
+            path
+        }
+
+    override suspend fun downloadImage(imagePath: String): Outcome<ByteArray> =
+        runCatchingDomain(supabase.isConfigured) {
+            supabase.storage.from(RECEIPTS_BUCKET).downloadAuthenticated(imagePath)
+        }
+
+    override suspend fun getReceipt(receiptId: String): Outcome<Receipt> =
+        runCatchingDomain(supabase.isConfigured) {
+            (supabase.postgrest
+                    .from("receipts")
+                    .select {
+                        filter {
+                            eq("user_id", config.userId)
+                            eq("id", receiptId)
+                        }
+                        limit(1)
+                    }
+                    .decodeSingleOrNull<ReceiptDto>() ?: notFound())
+                .toDomain(config.defaultCurrency)
+        }
+
+    override suspend fun markPending(receiptId: String): Outcome<Unit> =
+        runCatchingDomain(supabase.isConfigured) {
+            supabase.postgrest.from("receipts").update(ReceiptStatusPatch(status = "pending")) {
+                filter {
+                    eq("user_id", config.userId)
+                    eq("id", receiptId)
+                }
+            }
+            Unit
         }
 
     override suspend fun getActive(): Outcome<List<Receipt>> =
@@ -184,6 +233,24 @@ class SupabaseReceiptRepository(
 
     override suspend fun delete(receiptId: String): Outcome<Unit> =
         runCatchingDomain(supabase.isConfigured) {
+            // Najpierw best-effort usuń zdjęcie z bucketu — brak/niepowodzenie nie blokuje usunięcia wiersza.
+            val dto =
+                supabase.postgrest
+                    .from("receipts")
+                    .select {
+                        filter {
+                            eq("user_id", config.userId)
+                            eq("id", receiptId)
+                        }
+                        limit(1)
+                    }
+                    .decodeSingleOrNull<ReceiptDto>()
+            dto?.imagePath?.let { path ->
+                runCatching { supabase.storage.from(RECEIPTS_BUCKET).delete(path) }
+                    .onFailure {
+                        AppLog.w("Receipt.delete: nie usunięto zdjęcia z bucketu (best-effort): ${it.message}")
+                    }
+            }
             supabase.postgrest.from("receipts").delete {
                 filter {
                     eq("user_id", config.userId)
@@ -236,6 +303,16 @@ private data class ReceiptReadyPatch(
 @kotlinx.serialization.Serializable
 private data class ReceiptAcknowledgePatch(
     @kotlinx.serialization.SerialName("acknowledged") val acknowledged: Boolean,
+)
+
+@kotlinx.serialization.Serializable
+private data class ReceiptImagePathPatch(
+    @kotlinx.serialization.SerialName("image_path") val imagePath: String,
+)
+
+@kotlinx.serialization.Serializable
+private data class ReceiptStatusPatch(
+    @kotlinx.serialization.SerialName("status") val status: String,
 )
 
 @kotlinx.serialization.Serializable

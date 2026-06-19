@@ -24,14 +24,12 @@ import io.ktor.http.ContentType
 import io.ktor.http.HttpHeaders
 import io.ktor.http.contentType
 import io.ktor.http.isSuccess
-import kotlin.io.encoding.Base64
-import kotlin.io.encoding.ExperimentalEncodingApi
 import kotlinx.serialization.json.Json
 
 /**
  * Realna analiza paragonu — wywołuje Edge Function `analyze-receipt` (Haiku vision + kategoryzacja).
- * Zdjęcie wysyłamy jako base64 (MVP bez Storage/Auth); funkcja po `userId` czyta kategorie i pamięć
- * z DB. Odpowiedź (grosze, kategoria po nazwie) mapujemy na domenowe [RawReceiptAnalysis].
+ * Zdjęcie wskazujemy ścieżką w Storage (`imagePath` w bucketcie `receipts`) — funkcja pobiera je
+ * service_role keyem. Odpowiedź (grosze, kategoria po nazwie) mapujemy na domenowe [RawReceiptAnalysis].
  *
  * Auth: brak pluginu Auth w MVP — uwierzytelniamy anon keyem (ważny JWT projektu), co przechodzi
  * `verify_jwt = true` funkcji.
@@ -49,18 +47,18 @@ class SupabaseFunctionReceiptAnalysisRepository(
     private val endpoint: String
         get() = "${config.supabaseUrl.trimEnd('/')}/functions/v1/analyze-receipt"
 
-    @OptIn(ExperimentalEncodingApi::class)
-    override suspend fun analyze(image: ByteArray): Outcome<RawReceiptAnalysis> =
+    override suspend fun analyze(imagePath: String): Outcome<RawReceiptAnalysis> =
         runCatchingDomain(config.isSupabaseConfigured) {
             AppLog.action(
                 "ReceiptAnalysis.analyze",
-                "imageBytes=${image.size} userId=${config.userId} -> $endpoint",
+                "imagePath=$imagePath userId=${config.userId} -> $endpoint",
             )
             val request =
                 AnalyzeReceiptRequest(
-                    imageBase64 = Base64.encode(image),
                     userId = config.userId,
                     currency = config.defaultCurrency,
+                    imagePath = imagePath,
+                    bucket = RECEIPTS_BUCKET,
                 )
 
             val response =

@@ -1,7 +1,9 @@
 package com.sd.kupka_pieniedzy_client.feature.entries
 
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -20,10 +22,13 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.decodeToImageBitmap
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -37,6 +42,7 @@ import com.sd.kupka_pieniedzy_client.designsystem.component.EntryAmount
 import com.sd.kupka_pieniedzy_client.designsystem.component.EntryRow
 import com.sd.kupka_pieniedzy_client.designsystem.component.ExpandableEntryRow
 import com.sd.kupka_pieniedzy_client.designsystem.component.IconTile
+import com.sd.kupka_pieniedzy_client.designsystem.component.KupkaBottomSheet
 import com.sd.kupka_pieniedzy_client.designsystem.component.KupkaListCard
 import com.sd.kupka_pieniedzy_client.designsystem.component.KupkaProgressBar
 import com.sd.kupka_pieniedzy_client.designsystem.component.LoadingIndicator
@@ -69,29 +75,50 @@ fun EntriesScreen() {
     val vm: EntriesViewModel = koinViewModel()
     val state by vm.state.collectAsStateWithLifecycle()
     val expanded by vm.expanded.collectAsStateWithLifecycle()
+    val sheet by vm.analyzingSheet.collectAsStateWithLifecycle()
     val colors = KupkaTheme.colors
 
-    Column(modifier = Modifier.fillMaxSize().background(colors.surfaceBg)) {
-        StateContainer(state = state, onRetry = vm::load, modifier = Modifier.weight(1f)) {
-            snapshot ->
-            EntriesContent(
-                snapshot = snapshot,
-                expandedReceiptId = expanded?.receiptId,
-                expandedPositions = expanded?.positions,
-                onSortClick = {
-                    vm.setSort(
-                        if (snapshot.sort == EntrySort.Newest) EntrySort.Highest
-                        else EntrySort.Newest
-                    )
-                },
-                onFilter = vm::setFilter,
-                onPrevMonth = vm::previousMonth,
-                onNextMonth = vm::nextMonth,
-                onToggleReceipt = vm::toggleReceipt,
+    Box(modifier = Modifier.fillMaxSize().background(colors.surfaceBg)) {
+        Column(modifier = Modifier.fillMaxSize()) {
+            StateContainer(state = state, onRetry = vm::load, modifier = Modifier.weight(1f)) {
+                snapshot ->
+                EntriesContent(
+                    snapshot = snapshot,
+                    expandedReceiptId = expanded?.receiptId,
+                    expandedPositions = expanded?.positions,
+                    onSortClick = {
+                        vm.setSort(
+                            if (snapshot.sort == EntrySort.Newest) EntrySort.Highest
+                            else EntrySort.Newest
+                        )
+                    },
+                    onFilter = vm::setFilter,
+                    onPrevMonth = vm::previousMonth,
+                    onNextMonth = vm::nextMonth,
+                    onToggleReceipt = vm::toggleReceipt,
+                    onAnalyzingClick = vm::openAnalyzingSheet,
+                )
+            }
+            if (state is ScreenState.Content) {
+                AppBottomBar(selected = 1)
+            }
+        }
+
+        // Arkusz „w toku” — akcje paragonu w analizie (ukryty, gdy otwarty podgląd zdjęcia).
+        KupkaBottomSheet(
+            visible = sheet != null && sheet?.preview == null,
+            onDismiss = vm::closeAnalyzingSheet,
+        ) {
+            EntryProgressSheetContent(
+                onReanalyze = vm::reanalyzeAnalyzing,
+                onShowImage = vm::showAnalyzingImage,
+                onCancel = vm::cancelAnalyzing,
             )
         }
-        if (state is ScreenState.Content) {
-            AppBottomBar(selected = 1)
+
+        // Podgląd zapisanego zdjęcia (nad arkuszem).
+        sheet?.preview?.let { preview ->
+            ReceiptImagePreview(state = preview, onClose = vm::closeImagePreview)
         }
     }
 }
@@ -106,6 +133,7 @@ private fun EntriesContent(
     onPrevMonth: () -> Unit,
     onNextMonth: () -> Unit,
     onToggleReceipt: (String) -> Unit,
+    onAnalyzingClick: (String) -> Unit,
 ) {
     val strings = LocalStrings.current
     val colors = KupkaTheme.colors
@@ -175,6 +203,7 @@ private fun EntriesContent(
                         expandedReceiptId = expandedReceiptId,
                         expandedPositions = expandedPositions,
                         onToggleReceipt = onToggleReceipt,
+                        onAnalyzingClick = onAnalyzingClick,
                     )
                 }
             }
@@ -460,6 +489,7 @@ private fun DayCard(
     expandedReceiptId: String?,
     expandedPositions: ScreenState<List<ReceiptPositionItem>>?,
     onToggleReceipt: (String) -> Unit,
+    onAnalyzingClick: (String) -> Unit,
 ) {
     val colors = KupkaTheme.colors
     val strings = LocalStrings.current
@@ -488,7 +518,7 @@ private fun DayCard(
         group.entries.forEachIndexed { index, item ->
             val showDivider = index < group.entries.lastIndex
             when (item.kind) {
-                EntryKind.Analyzing -> AnalyzingRow(item, showDivider)
+                EntryKind.Analyzing -> AnalyzingRow(item, showDivider, onAnalyzingClick)
                 EntryKind.Receipt ->
                     ReceiptRow(
                         item = item,
@@ -637,14 +667,30 @@ private fun PositionRow(pos: ReceiptPositionItem, showDivider: Boolean) {
 }
 
 @Composable
-private fun AnalyzingRow(item: EntryListItem, showDivider: Boolean) {
+private fun AnalyzingRow(
+    item: EntryListItem,
+    showDivider: Boolean,
+    onAnalyzingClick: (String) -> Unit,
+) {
     val colors = KupkaTheme.colors
     val strings = LocalStrings.current
     EntryRow(
         title = item.title,
         meta = strings.analyzingReceipt,
         metaColor = colors.primaryHover,
-        trailing = { AppText("—", variant = TextVariant.BodyMono, color = colors.onSurfaceLow) },
+        trailing = {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(5.dp),
+            ) {
+                AppText("—", variant = TextVariant.BodyMono, color = colors.onSurfaceLow)
+                MaterialSymbol(
+                    AppIcons.ChevronRight,
+                    size = 20.dp,
+                    tint = colors.onSurfaceLow.copy(alpha = 0.5f),
+                )
+            }
+        },
         leading = {
             Box(
                 modifier =
@@ -658,6 +704,7 @@ private fun AnalyzingRow(item: EntryListItem, showDivider: Boolean) {
         },
         highlight = true,
         showDivider = showDivider,
+        onClick = item.receiptId?.let { id -> { onAnalyzingClick(id) } },
         contentPadding = rowPadding,
     )
 }
@@ -696,6 +743,57 @@ private fun EmptyState(filtered: Boolean) {
             variant = TextVariant.Caption,
             color = colors.onSurfaceLow,
             textAlign = TextAlign.Center,
+        )
+    }
+}
+
+/** Pełnoekranowy podgląd zapisanego zdjęcia paragonu (akcja „Pokaż zdjęcie” z arkusza „w toku”). */
+@Composable
+private fun ReceiptImagePreview(state: ScreenState<ByteArray>, onClose: () -> Unit) {
+    val colors = KupkaTheme.colors
+    val strings = LocalStrings.current
+    Box(
+        modifier =
+            Modifier.fillMaxSize()
+                .background(colors.scrim)
+                .clickable(
+                    interactionSource = remember { MutableInteractionSource() },
+                    indication = null,
+                    onClick = onClose,
+                ),
+        contentAlignment = Alignment.Center,
+    ) {
+        when (state) {
+            is ScreenState.Loading -> LoadingIndicator()
+            is ScreenState.Error ->
+                AppText(
+                    strings.imageLoadError,
+                    variant = TextVariant.Body,
+                    color = colors.onSurfaceMedium,
+                )
+            is ScreenState.Content -> {
+                val bitmap = remember(state.value) { runCatching { state.value.decodeToImageBitmap() }.getOrNull() }
+                if (bitmap != null) {
+                    Image(
+                        bitmap = bitmap,
+                        contentDescription = null,
+                        contentScale = ContentScale.Fit,
+                        modifier = Modifier.fillMaxSize().padding(20.dp),
+                    )
+                } else {
+                    AppText(
+                        strings.imageLoadError,
+                        variant = TextVariant.Body,
+                        color = colors.onSurfaceMedium,
+                    )
+                }
+            }
+        }
+        MaterialSymbol(
+            AppIcons.Close,
+            size = 26.dp,
+            tint = colors.onSurfaceHigh,
+            modifier = Modifier.align(Alignment.TopStart).padding(18.dp).clickable(onClick = onClose),
         )
     }
 }

@@ -3,6 +3,7 @@ package com.sd.kupka_pieniedzy_client.domain.service
 import com.sd.kupka_pieniedzy_client.core.error.DomainError
 import com.sd.kupka_pieniedzy_client.core.error.ValidationRule
 import com.sd.kupka_pieniedzy_client.core.result.Outcome
+import com.sd.kupka_pieniedzy_client.core.result.onFailure
 import com.sd.kupka_pieniedzy_client.core.result.onSuccess
 import com.sd.kupka_pieniedzy_client.core.result.outcomeBinding
 import com.sd.kupka_pieniedzy_client.core.time.DateProvider
@@ -16,9 +17,17 @@ import com.sd.kupka_pieniedzy_client.domain.repository.ReceiptRepository
 import com.sd.kupka_pieniedzy_client.domain.repository.TransactionRepository
 
 interface ReceiptService {
-    suspend fun createPendingReceipt(imagePath: String?): Outcome<String>
+    /** Tworzy paragon „w analizie” i wgrywa [image] (JPEG) do Storage. Zwraca id paragonu. */
+    suspend fun createPendingReceipt(image: ByteArray): Outcome<String>
 
-    suspend fun runAnalysis(receiptId: String, image: ByteArray): Outcome<Unit>
+    /** Uruchamia analizę zapisanego zdjęcia (czyta `image_path` paragonu). */
+    suspend fun runAnalysis(receiptId: String): Outcome<Unit>
+
+    /** Ponawia analizę: wraca do statusu „w analizie” i analizuje to samo zdjęcie ze Storage. */
+    suspend fun reanalyze(receiptId: String): Outcome<Unit>
+
+    /** Pobiera zapisane zdjęcie paragonu ze Storage (do podglądu). */
+    suspend fun getReceiptImage(receiptId: String): Outcome<ByteArray>
 
     suspend fun acknowledgeReady(receiptId: String): Outcome<Unit>
 
@@ -41,38 +50,59 @@ class DefaultReceiptService(
     private val changeNotifier: DataChangeNotifier,
 ) : ReceiptService {
 
-    override suspend fun createPendingReceipt(imagePath: String?): Outcome<String> =
-        receiptRepository
-            .createPending(store = null, imagePath = imagePath)
-            .onSuccess { changeNotifier.notifyTransactionsChanged() }
+    override suspend fun createPendingReceipt(image: ByteArray): Outcome<String> = outcomeBinding {
+        val id = receiptRepository.createPending(store = null, imagePath = null).bind()
+        // Wgraj zdjęcie do Storage; jeśli się nie uda — sprzątnij osierocony wiersz „w analizie”.
+        receiptRepository.uploadImage(id, image).onFailure { receiptRepository.delete(id) }.bind()
+        changeNotifier.notifyTransactionsChanged()
+        id
+    }
 
-    override suspend fun runAnalysis(receiptId: String, image: ByteArray): Outcome<Unit> =
-        outcomeBinding {
-            val raw = analysisRepository.analyze(image).bind()
-            val byName = categoryRepository.getAll().bind().associateBy { it.name.lowercase() }
+    override suspend fun runAnalysis(receiptId: String): Outcome<Unit> = outcomeBinding {
+        val receipt = receiptRepository.getReceipt(receiptId).bind()
+        val imagePath =
+            receipt.imagePath
+                ?: fail(DomainError.Unknown(cause = "Paragon $receiptId nie ma zapisanego zdjęcia"))
+        val raw = analysisRepository.analyze(imagePath).bind()
+        val byName = categoryRepository.getAll().bind().associateBy { it.name.lowercase() }
 
-            val items =
-                raw.items.mapIndexed { index, item ->
-                    AnalyzedItem(
-                        id = "$receiptId-$index",
-                        name = item.name,
-                        amount = item.amount,
-                        categoryId = item.suggestedCategoryName?.let { byName[it.lowercase()]?.id },
-                    )
-                }
-            val analyzed =
-                AnalyzedReceipt(
-                    receiptId = receiptId,
-                    store = raw.store,
-                    date = dateProvider.today(),
-                    total = raw.total,
-                    confidence = raw.confidence,
-                    imagePath = null, // MVP: zdjęcie idzie do funkcji jako base64, nie do Storage
-                    items = items,
+        val items =
+            raw.items.mapIndexed { index, item ->
+                AnalyzedItem(
+                    id = "$receiptId-$index",
+                    name = item.name,
+                    amount = item.amount,
+                    categoryId = item.suggestedCategoryName?.let { byName[it.lowercase()]?.id },
                 )
-            receiptRepository.markReady(analyzed, raw).bind()
-            changeNotifier.notifyTransactionsChanged()
-        }
+            }
+        val analyzed =
+            AnalyzedReceipt(
+                receiptId = receiptId,
+                store = raw.store,
+                date = dateProvider.today(),
+                total = raw.total,
+                confidence = raw.confidence,
+                imagePath = imagePath,
+                items = items,
+            )
+        receiptRepository.markReady(analyzed, raw).bind()
+        changeNotifier.notifyTransactionsChanged()
+    }
+
+    override suspend fun reanalyze(receiptId: String): Outcome<Unit> = outcomeBinding {
+        // Wróć do „w analizie” (UI od razu pokazuje spinner), potem analizuj zdjęcie ze Storage.
+        receiptRepository.markPending(receiptId).bind()
+        changeNotifier.notifyTransactionsChanged()
+        runAnalysis(receiptId).bind()
+    }
+
+    override suspend fun getReceiptImage(receiptId: String): Outcome<ByteArray> = outcomeBinding {
+        val receipt = receiptRepository.getReceipt(receiptId).bind()
+        val imagePath =
+            receipt.imagePath
+                ?: fail(DomainError.Unknown(cause = "Paragon $receiptId nie ma zapisanego zdjęcia"))
+        receiptRepository.downloadImage(imagePath).bind()
+    }
 
     override suspend fun acknowledgeReady(receiptId: String): Outcome<Unit> =
         receiptRepository.acknowledge(receiptId)

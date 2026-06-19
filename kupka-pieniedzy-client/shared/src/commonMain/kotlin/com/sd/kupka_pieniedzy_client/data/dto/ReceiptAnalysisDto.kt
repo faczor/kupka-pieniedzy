@@ -3,12 +3,18 @@ package com.sd.kupka_pieniedzy_client.data.dto
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 
-/** Żądanie do Edge Function `analyze-receipt` (MVP: zdjęcie jako base64). */
+/**
+ * Żądanie do Edge Function `analyze-receipt`. Zdjęcie wskazujemy ścieżką w Storage
+ * ([imagePath] w [bucket]) — funkcja pobiera je przez service_role. [imageBase64] zostaje jako
+ * opcjonalny fallback (np. test bez Storage), ale produkcyjnie wysyłamy ścieżkę.
+ */
 @Serializable
 data class AnalyzeReceiptRequest(
-    @SerialName("imageBase64") val imageBase64: String,
     @SerialName("userId") val userId: String,
     @SerialName("currency") val currency: String,
+    @SerialName("imagePath") val imagePath: String? = null,
+    @SerialName("bucket") val bucket: String? = null,
+    @SerialName("imageBase64") val imageBase64: String? = null,
 )
 
 /** Odpowiedź funkcji. Kwoty w groszach (minor units) — spójnie z [com.sd.kupka_pieniedzy_client.core.money.Money]. */

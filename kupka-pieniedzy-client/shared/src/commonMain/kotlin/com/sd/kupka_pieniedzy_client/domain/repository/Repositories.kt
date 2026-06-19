@@ -72,6 +72,18 @@ interface BudgetRepository {
 interface ReceiptRepository {
     suspend fun createPending(store: String?, imagePath: String?): Outcome<String>
 
+    /** Wgrywa zdjęcie [bytes] (JPEG) do bucketu `receipts` i zapisuje `image_path` na paragonie. Zwraca ścieżkę. */
+    suspend fun uploadImage(receiptId: String, bytes: ByteArray): Outcome<String>
+
+    /** Pobiera zdjęcie z bucketu `receipts` (do podglądu). */
+    suspend fun downloadImage(imagePath: String): Outcome<ByteArray>
+
+    /** Nagłówek paragonu po id (m.in. `image_path` do ponownej analizy). */
+    suspend fun getReceipt(receiptId: String): Outcome<Receipt>
+
+    /** Przywraca status `pending` (ponowna analiza pokazuje wiersz „w analizie”). */
+    suspend fun markPending(receiptId: String): Outcome<Unit>
+
     suspend fun getActive(): Outcome<List<Receipt>>
 
     /** Paragony zapisane (status `saved`) z datą w okresie — do mapowania transakcja→paragon na liście. */
@@ -103,6 +115,9 @@ interface ReceiptRepository {
 }
 
 interface ReceiptAnalysisRepository {
-    /** Analiza zdjęcia paragonu (bajty JPEG/PNG) — Edge Function (Haiku vision + kategoryzacja). */
-    suspend fun analyze(image: ByteArray): Outcome<RawReceiptAnalysis>
+    /**
+     * Analiza paragonu po ścieżce w Storage ([imagePath] w bucketcie `receipts`) — Edge Function
+     * (Haiku vision + kategoryzacja) pobiera zdjęcie z bucketu i zwraca rozbicie.
+     */
+    suspend fun analyze(imagePath: String): Outcome<RawReceiptAnalysis>
 }

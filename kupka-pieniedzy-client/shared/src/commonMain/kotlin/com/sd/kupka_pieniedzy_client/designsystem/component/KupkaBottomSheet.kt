@@ -123,9 +123,9 @@ fun SheetHeader(title: String, onClose: () -> Unit, modifier: Modifier = Modifie
 fun SheetActionRow(
     icon: String,
     title: String,
-    subtitle: String,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
+    subtitle: String? = null,
     destructive: Boolean = false,
 ) {
     val colors = KupkaTheme.colors
@@ -140,7 +140,9 @@ fun SheetActionRow(
         MaterialSymbol(icon, size = 23.dp, tint = iconTint)
         Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(1.dp)) {
             AppText(title, variant = TextVariant.Body, color = titleColor)
-            AppText(subtitle, variant = TextVariant.Caption, color = colors.onSurfaceLow)
+            if (!subtitle.isNullOrBlank()) {
+                AppText(subtitle, variant = TextVariant.Caption, color = colors.onSurfaceLow)
+            }
         }
     }
 }

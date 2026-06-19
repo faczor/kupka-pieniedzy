@@ -42,12 +42,12 @@ class AddExpenseViewModel(
         AppLog.action("AddExpense.startReceiptAnalysis", "imageBytes=${image.size}")
         viewModelScope.launch {
             receiptService
-                .createPendingReceipt(imagePath = null)
+                .createPendingReceipt(image)
                 .fold(
                     onSuccess = { id ->
                         _starting.value = false
                         onStarted()
-                        receiptService.runAnalysis(id, image).onFailure {
+                        receiptService.runAnalysis(id).onFailure {
                             AppLog.failure("AddExpense.runAnalysis", it)
                             _error.value = it
                             toast.show(ToastMessage.ReceiptAnalysisFailed)
